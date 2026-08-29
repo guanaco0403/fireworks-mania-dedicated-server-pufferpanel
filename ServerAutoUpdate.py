@@ -1,8 +1,8 @@
 import argparse
-import requests
 import os
+import requests
 import zipfile
-from github import Github
+from github import Github, BadCredentialsException, UnknownObjectException
 
 # ANSI Color Codes
 CLR_RESET = "\033[0m"
@@ -48,9 +48,22 @@ def download_asset(asset, asset_name, github_token=None):
                         file.write(chunk)
             print_success(f"Successfully downloaded {asset_name}")
             return True
-        else:
-            print_error(f"Failed to download asset (HTTP {response.status_code}): {response.text}")
-            return False
+        elif response.status_code in (401, 403, 404) and github_token:
+            print_warn(f"Download with provided token returned HTTP {response.status_code}. Retrying without token...")
+            headers_no_token = {'Accept': 'application/octet-stream'}
+            response_retry = requests.get(asset.url, headers=headers_no_token, stream=True)
+            if response_retry.status_code == 200:
+                with open(asset_name, 'wb') as file:
+                    for chunk in response_retry.iter_content(chunk_size=1024):
+                        if chunk:
+                            file.write(chunk)
+                print_success(f"Successfully downloaded {asset_name} (unauthenticated)")
+                return True
+
+        print_error(f"Failed to download asset (HTTP {response.status_code}): {response.text}")
+        if not github_token and response.status_code in (401, 403, 404):
+            print_warn("Notice: If this repository asset is private or rate-limited, please specify a valid GitHub Token in PufferPanel settings.")
+        return False
     except Exception as e:
         print_error(f"Download exception: {e}")
         return False
@@ -69,25 +82,46 @@ def extract_zip(file_path):
 
 def main(github_token=None, github_repo=None, server_version=None):
     token = github_token.strip() if github_token and github_token.strip() and github_token.strip().lower() != "none" else None
-    if token:
-        print_info(f"Using GitHub Token: {token[:4]}...{token[-4:]}")
-        g = Github(token)
-    else:
-        print_warn("No GitHub token provided. Using unauthenticated API access...")
-        g = Github()
-
     repo_target = github_repo.strip() if github_repo and github_repo.strip() else 'Laumania/FireworksMania.DedicatedServer'
     version_target = server_version.strip() if server_version and server_version.strip() else 'latest'
 
     print_info(f"Target Repository: {repo_target}")
     print_info(f"Target Version: {version_target}")
 
-    try:
-        repo = g.get_repo(repo_target)
-        print_success(f"Accessed repository: {repo.full_name}")
-    except Exception as e:
-        print_error(f"Error accessing repository '{repo_target}': {e}")
-        return
+    g = None
+    repo = None
+
+    if token:
+        print_info(f"Using GitHub Token: {token[:4]}...{token[-4:]}")
+        try:
+            g = Github(token)
+            repo = g.get_repo(repo_target)
+            print_success(f"Accessed repository: {repo.full_name} (Authenticated)")
+        except BadCredentialsException:
+            print_warn("Provided GitHub Token is invalid or expired. Retrying unauthenticated...")
+            token = None
+            g = Github()
+        except Exception as e:
+            print_warn(f"Authenticated access failed ({e}). Retrying unauthenticated...")
+            g = Github()
+
+    if not repo:
+        if not token:
+            print_info("No GitHub token provided. Using unauthenticated API access...")
+            g = Github()
+        try:
+            repo = g.get_repo(repo_target)
+            print_success(f"Accessed repository: {repo.full_name}")
+        except UnknownObjectException:
+            print_error(f"Repository '{repo_target}' not found (404).")
+            if not token:
+                print_warn("If this repository is private, a valid GitHub Personal Access Token is required in PufferPanel settings.")
+            return
+        except Exception as e:
+            print_error(f"Error accessing repository '{repo_target}': {e}")
+            if not token:
+                print_warn("If this repository is private or rate-limited, please provide a valid GitHub Personal Access Token in PufferPanel settings.")
+            return
 
     # Fetch targeted release
     target_release = None
@@ -124,6 +158,8 @@ def main(github_token=None, github_repo=None, server_version=None):
 
     if not target_release:
         print_error(f"Could not find release matching version '{version_target}' in {repo_target}.")
+        if not token:
+            print_warn("Notice: If this version or repository requires authentication, please specify a GitHub Token in PufferPanel settings.")
         return
 
     # Find Linux asset in release
@@ -142,7 +178,7 @@ def main(github_token=None, github_repo=None, server_version=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download and update Dedicated Server from GitHub')
-    parser.add_argument('positional_token', type=str, nargs='?', default='', help='GitHub token (legacy positional argument)')
+    parser.add_argument('positional_token', type=str, nargs='?', default='', help='GitHub token (optional positional argument)')
     parser.add_argument('--token', type=str, default='', help='Your GitHub access token')
     parser.add_argument('--repo', type=str, default='Laumania/FireworksMania.DedicatedServer', help='GitHub repository (owner/repo)')
     parser.add_argument('--version', type=str, default='latest', help='Server release version or tag name (e.g. latest or v1.2.0)')
@@ -150,4 +186,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     token = args.token if args.token else args.positional_token
-    main(github_token=token, github_repo=args.repo, server_version=args.version)
+    if token and (token.startswith("${") and token.endswith("}")):
+        token = ""
+
+    repo = args.repo
+    if repo and (repo.startswith("${") and repo.endswith("}")):
+        repo = "Laumania/FireworksMania.DedicatedServer"
+
+    version = args.version
+    if version and (version.startswith("${") and version.endswith("}")):
+        version = "latest"
+
+    main(github_token=token, github_repo=repo, server_version=version)
