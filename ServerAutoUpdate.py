@@ -25,10 +25,10 @@ def print_error(msg):
     print(f"{CLR_RED}[ERROR]{CLR_RESET} {msg}")
 
 print(".")
-print(f"{CLR_GREEN}=========================================={CLR_RESET}")
-print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Auto Server Updater V2.0{CLR_RESET}")
-print(f"               {CLR_CYAN}By Guanaco0403{CLR_RESET}")
-print(f"{CLR_GREEN}=========================================={CLR_RESET}")
+print(f"{CLR_GREEN}=============================================={CLR_RESET}")
+print(f" {CLR_CYAN}{CLR_BOLD}Fireworks Mania Auto Server Updater V2.0{CLR_RESET}")
+print(f"{CLR_CYAN}By Guanaco0403{CLR_RESET}")
+print(f"{CLR_GREEN}=============================================={CLR_RESET}")
 
 def download_asset(asset, asset_name, github_token=None):
     print_info(f"Downloading asset: {asset_name}...")
