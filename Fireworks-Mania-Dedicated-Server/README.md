@@ -12,7 +12,7 @@ This PufferPanel template for installing, configuring, and managing a [Fireworks
 
 - **Docker**: Requies host Docker environment support in PufferPanel.
 - **Network**: Port **7777** (UDP) forwarded and exposed on your host network. **Note: this port is by default but can be changed in the server configuration.**
-- **GitHub Access Token** *(Optional)*: A GitHub PAT with `public_repo` scope to avoid API rate limits when downloading server releases.
+- **GitHub Access Token** *(Optional)*: A GitHub PAT with **public_repo** scope to avoid API rate limits when downloading server releases.
 - **mod.io Access Token** *(Optional)*: Required if you wish to download and load custom community mods via mod.io.
 
 ## Installation & Maintenance
