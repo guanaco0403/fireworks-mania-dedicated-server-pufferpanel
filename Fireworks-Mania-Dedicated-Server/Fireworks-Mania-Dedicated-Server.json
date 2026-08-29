@@ -213,7 +213,7 @@
     "uninstall": null,
     "run": {
         "command": "./FireworksManiaDedicatedLinux.x86_64",
-        "stopCode": 3,
+        "stop": "quit",
         "pre": [
             {
                 "type": "command",
