@@ -26,7 +26,7 @@ def print_error(msg):
 
 print(".")
 print(f"{CLR_GREEN}=============================================={CLR_RESET}")
-print(f" {CLR_CYAN}{CLR_BOLD}Fireworks Mania Auto Server Updater V2.0{CLR_RESET}")
+print(f"{CLR_CYAN}{CLR_BOLD}Fireworks Mania Auto Server Updater V2.0{CLR_RESET}")
 print(f"{CLR_CYAN}By Guanaco0403{CLR_RESET}")
 print(f"{CLR_GREEN}=============================================={CLR_RESET}")
 
