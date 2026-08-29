@@ -1,0 +1,249 @@
+{
+    "type": "Fireworks-Mania",
+    "display": "Fireworks-Mania-Dedicated-Server",
+    "data": {
+        "auto-despawn-enabled": {
+            "type": "boolean",
+            "value": true,
+            "display": "Enable Auto Despawn Used Fireworks",
+            "required": true,
+            "userEdit": true
+        },
+        "enable-destructions": {
+            "type": "boolean",
+            "value": true,
+            "display": "Enable Map Destructions",
+            "required": true,
+            "userEdit": true
+        },
+        "enable-fly-mode": {
+            "type": "boolean",
+            "value": true,
+            "display": "Enable Fly Mode",
+            "required": true,
+            "userEdit": true
+        },
+        "explosion-forces-enabled": {
+            "type": "boolean",
+            "value": true,
+            "display": "Enable Explosion Physics Forces",
+            "required": true,
+            "userEdit": true
+        },
+        "github-token": {
+            "type": "string",
+            "value": "",
+            "display": "GitHub Token (for Auto Updater)",
+            "required": false,
+            "userEdit": false
+        },
+        "ignition-forces-enabled": {
+            "type": "boolean",
+            "value": true,
+            "display": "Enable Ignition Forces",
+            "required": true,
+            "userEdit": true
+        },
+        "locked-items": {
+            "type": "string",
+            "value": "[]",
+            "display": "Locked Items IDs",
+            "required": true,
+            "userEdit": true
+        },
+        "max-fireworks": {
+            "type": "integer",
+            "value": 20,
+            "display": "Max Player Spawned Fireworks",
+            "required": true,
+            "userEdit": true
+        },
+        "max-players": {
+            "type": "integer",
+            "value": 10,
+            "display": "Max Players",
+            "required": true,
+            "userEdit": true
+        },
+        "max-props": {
+            "type": "integer",
+            "value": 60,
+            "display": "Max Player Spawned Props",
+            "required": true,
+            "userEdit": true
+        },
+        "modio-token": {
+            "type": "string",
+            "value": "",
+            "display": "mod.io Personal Access Token",
+            "required": false,
+            "userEdit": false
+        },
+        "server-author": {
+            "type": "string",
+            "value": "Unknown",
+            "display": "Author",
+            "required": true,
+            "userEdit": true
+        },
+        "server-description": {
+            "type": "string",
+            "value": "My brand new server",
+            "display": "Server Description",
+            "required": false,
+            "userEdit": true
+        },
+        "server-ip": {
+            "type": "string",
+            "value": "0.0.0.0",
+            "display": "Server IP",
+            "required": true,
+            "userEdit": false
+        },
+        "server-map": {
+            "type": "string",
+            "value": "Flat",
+            "display": "Map",
+            "required": true,
+            "userEdit": true
+        },
+        "server-mods": {
+            "type": "string",
+            "value": "[]",
+            "display": "Mods (JSON Array of mod.io IDs)",
+            "required": true,
+            "userEdit": true
+        },
+        "server-name": {
+            "type": "string",
+            "value": "My Server",
+            "display": "Server Name",
+            "required": true,
+            "userEdit": true
+        },
+        "server-port": {
+            "type": "integer",
+            "value": 7777,
+            "display": "Server Port (UDP)",
+            "required": true,
+            "userEdit": false
+        },
+        "spawn-delay": {
+            "type": "string",
+            "value": "0.2",
+            "display": "Minimum Spawn Delay Per Player",
+            "required": true,
+            "userEdit": true
+        },
+        "who-can-join": {
+            "type": "integer",
+            "value": 0,
+            "display": "Who Can Join (0=Everyone, 1=Friends)",
+            "required": true,
+            "userEdit": false
+        }
+    },
+    "groups": [
+        {
+            "display": "Game Settings",
+            "description": "",
+            "variables": [
+                "auto-despawn-enabled",
+                "enable-destructions",
+                "enable-fly-mode",
+                "explosion-forces-enabled",
+                "ignition-forces-enabled",
+                "max-fireworks",
+                "max-props",
+                "spawn-delay",
+                "max-players",
+                "server-name",
+                "server-description",
+                "server-author",
+                "server-map",
+                "server-mods",
+                "modio-token",
+                "github-token",
+                "locked-items"
+            ],
+            "order": 1
+        },
+        {
+            "display": "Network Settings",
+            "description": "",
+            "variables": [
+                "who-can-join",
+                "server-ip",
+                "server-port"
+            ],
+            "order": 2
+        }
+    ],
+    "install": [
+        {
+            "type": "command",
+            "commands": [
+                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py https://raw.githubusercontent.com/guanaco0403/YOUR_REPOSITORY/main/ServerAutoUpdate.py && python3 ServerAutoUpdate.py ${github-token} || true\""
+            ]
+        }
+    ],
+    "uninstall": null,
+    "run": {
+        "command": "./FireworksManiaDedicatedLinux.x86_64",
+        "stopCode": 3,
+        "pre": [
+            {
+                "type": "command",
+                "commands": [
+                    "chmod +x FireworksManiaDedicatedLinux.x86_64"
+                ]
+            },
+            {
+                "type": "writefile",
+                "target": "host.config",
+                "text": "{\n  \"HostConfig\": {\n    \"WhoCanJoin\": ${who-can-join},\n    \"ConnectionType\": 2,\n    \"Name\": \"${server-name}\",\n    \"Description\": \"${server-description}\",\n    \"Author\": \"${server-author}\",\n    \"MaxPlayers\": ${max-players},\n    \"IP\": \"${server-ip}\",\n    \"Port\": ${server-port}\n  },\n  \"GameConfig\": {\n    \"Mods\": ${server-mods},\n    \"Map\": \"${server-map}\",\n    \"LockedInventoryEntityIds\": ${locked-items},\n    \"EnableIgnitionForces\": ${ignition-forces-enabled},\n    \"EnableExplosionPhysicsForces\": ${explosion-forces-enabled},\n    \"EnableAutoDespawnUsedFireworks\": ${auto-despawn-enabled},\n    \"EnableDestructions\": ${enable-destructions},\n    \"EnableFlyMode\": ${enable-fly-mode},\n    \"MaxAllowedPlayerSpawnedFireworks\": ${max-fireworks},\n    \"MaxAllowedPlayerSpawnedProps\": ${max-props},\n    \"MinTimeBetweenPlayerSpawnInSeconds\": ${spawn-delay}\n  }\n}"
+            },
+            {
+                "type": "writefile",
+                "text": "${modio-token}",
+                "target": "modio.token"
+            }
+        ],
+        "stdin": {
+            "type": "stdin"
+        },
+        "autostart": false,
+        "autorecover": false,
+        "autorestart": false
+    },
+    "environment": {
+        "type": "docker",
+        "image": "pufferpanel/ubuntu",
+        "containerRoot": "",
+        "networkName": "host",
+        "bindings": {},
+        "portBindings": []
+    },
+    "supportedEnvironments": [
+        {
+            "type": "docker",
+            "image": "pufferpanel/ubuntu",
+            "containerRoot": "",
+            "networkName": "host",
+            "bindings": {},
+            "portBindings": []
+        }
+    ],
+    "requirements": {},
+    "stats": {
+        "type": ""
+    },
+    "query": {
+        "type": ""
+    },
+    "keepAlive": {
+        "frequency": "",
+        "command": ""
+    },
+    "name": "Fireworks Mania Dedicated Server"
+}

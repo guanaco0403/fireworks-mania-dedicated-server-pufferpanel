@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+
+# PufferPanel server runtime artifacts
+host.config
+modio.token
+*.zip
+FireworksManiaDedicatedLinux.x86_64
+FireworksManiaDedicatedLinux_Data/
+UnityPlayer.so
