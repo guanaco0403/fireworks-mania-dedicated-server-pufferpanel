@@ -35,14 +35,14 @@
             "value": "Laumania/FireworksMania.DedicatedServer",
             "display": "Dedicated Server Repository (owner/repo)",
             "required": false,
-            "userEdit": true
+            "userEdit": false
         },
         "github-token": {
             "type": "string",
             "value": "",
             "display": "GitHub Token (for Auto Updater)",
             "required": false,
-            "userEdit": true
+            "userEdit": false
         },
         "ignition-forces-enabled": {
             "type": "boolean",
@@ -84,7 +84,7 @@
             "value": "",
             "display": "mod.io Personal Access Token",
             "required": false,
-            "userEdit": true
+            "userEdit": false
         },
         "server-author": {
             "type": "string",
@@ -140,7 +140,7 @@
             "value": "latest",
             "display": "Server Version / Release Tag (latest or tag name e.g. v1.2.0)",
             "required": false,
-            "userEdit": true
+            "userEdit": false
         },
         "spawn-delay": {
             "type": "string",
