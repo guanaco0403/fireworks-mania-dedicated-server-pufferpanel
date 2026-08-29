@@ -4,82 +4,103 @@ import os
 import zipfile
 from github import Github
 
+# ANSI Color Codes
+CLR_RESET = "\033[0m"
+CLR_GREEN = "\033[32m"
+CLR_CYAN = "\033[36m"
+CLR_YELLOW = "\033[33m"
+CLR_RED = "\033[31m"
+CLR_BOLD = "\033[1m"
+
+def print_info(msg):
+    print(f"{CLR_CYAN}[INFO]{CLR_RESET} {msg}")
+
+def print_success(msg):
+    print(f"{CLR_GREEN}[SUCCESS]{CLR_RESET} {msg}")
+
+def print_warn(msg):
+    print(f"{CLR_YELLOW}[WARNING]{CLR_RESET} {msg}")
+
+def print_error(msg):
+    print(f"{CLR_RED}[ERROR]{CLR_RESET} {msg}")
+
 print(".")
-print("\u001B[32m====================================\u001B[0m")
-print("  \u001B[36mFireworks Mania Auto Server Updater V1.5\u001B[0m")
-print("          \u001B[36mBy Guanaco0403\u001B[0m")
-print("\u001B[32m====================================\u001B[0m")
+print(f"{CLR_GREEN}=========================================={CLR_RESET}")
+print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Auto Server Updater V2.0{CLR_RESET}")
+print(f"               {CLR_CYAN}By Guanaco0403{CLR_RESET}")
+print(f"{CLR_GREEN}=========================================={CLR_RESET}")
 
 def download_asset(asset, asset_name, github_token=None):
-    print(f'Downloading Asset: {asset_name}...')
+    print_info(f"Downloading asset: {asset_name}...")
     headers = {
         'Accept': 'application/octet-stream'
     }
     if github_token and github_token.strip() and github_token.strip().lower() != "none":
         headers['Authorization'] = f'token {github_token.strip()}'
 
-    response = requests.get(asset.url, headers=headers, stream=True)
+    try:
+        response = requests.get(asset.url, headers=headers, stream=True)
 
-    if response.status_code == 200:
-        with open(asset_name, 'wb') as file:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    file.write(chunk)
-        print("\u001B[32mDownload Success\u001B[0m")
-    else:
-        print(f'\u001B[31mFailed to download asset: {response.status_code}\u001B[0m')
-        print(response.text)
+        if response.status_code == 200:
+            with open(asset_name, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        file.write(chunk)
+            print_success(f"Successfully downloaded {asset_name}")
+        else:
+            print_error(f"Failed to download asset (HTTP {response.status_code}): {response.text}")
+    except Exception as e:
+        print_error(f"Download exception: {e}")
 
 def extract_zip(file_path):
-    print("Extracting Archive...")
-    with zipfile.ZipFile(file_path, 'r') as zip_ref:
-        extract_path = os.path.dirname(os.path.abspath(__file__))
-        zip_ref.extractall(extract_path)
-        print("\u001B[32mExtraction Success\u001B[0m")
-        print(f'Extracted files to: {extract_path}')
+    print_info("Extracting archive...")
+    try:
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            extract_path = os.path.dirname(os.path.abspath(__file__))
+            zip_ref.extractall(extract_path)
+            print_success(f"Extracted files to: {extract_path}")
+    except Exception as e:
+        print_error(f"Failed to extract archive: {e}")
 
 def main(github_token=None):
-    # Initialize Github instance
     token = github_token.strip() if github_token and github_token.strip() and github_token.strip().lower() != "none" else None
     if token:
-        print(f'Using GitHub Token: {token[:4]}...{token[-4:]}')
+        print_info(f"Using GitHub Token: {token[:4]}...{token[-4:]}")
         g = Github(token)
     else:
-        print('No GitHub token provided. Using unauthenticated API access...')
+        print_warn("No GitHub token provided. Using unauthenticated API access...")
         g = Github()
 
     repo_owner = 'Laumania'
     repo_name = 'FireworksMania.DedicatedServer'
-    print(f'Repository: {repo_owner}/{repo_name}')
+    print_info(f"Target Repository: {repo_owner}/{repo_name}")
 
     try:
-        # Get the repository
         repo = g.get_repo(f"{repo_owner}/{repo_name}")
-        print(f'Accessed repository: {repo.full_name}')
+        print_success(f"Accessed repository: {repo.full_name}")
     except Exception as e:
-        print(f'\u001B[31mError accessing repository: {e}\u001B[0m')
+        print_error(f"Error accessing repository: {e}")
         return
 
-    # Get releases
     try:
         releases = repo.get_releases()
-        print(f'Found {releases.totalCount} releases')
+        print_info(f"Found {releases.totalCount} release(s)")
     except Exception as e:
-        print(f'\u001B[31mError fetching releases: {e}\u001B[0m')
+        print_error(f"Error fetching releases: {e}")
         return
 
     if releases:
         for release in releases:
             for asset in release.get_assets():
                 if 'Linux' in asset.name and asset.name.endswith('.zip'):
-                    print(f'Found asset: {asset.name}')
+                    print_info(f"Found target release asset: {asset.name}")
                     download_asset(asset, asset.name, token)
                     extract_zip(asset.name)
-                    print("\u001B[32m=================================================\u001B[0m")
-                    print("  \u001B[36mFireworks Mania Server Successfully Installed\u001B[0m")
-                    print("\u001B[32m=================================================\u001B[0m")
+                    print(f"{CLR_GREEN}================================================={CLR_RESET}")
+                    print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Server Successfully Installed{CLR_RESET}")
+                    print(f"{CLR_GREEN}================================================={CLR_RESET}")
                     return
-        print("\u001B[31mNo matching asset found.\u001B[0m")
+        print_error("No matching Linux server asset (.zip) found in releases.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download and update Dedicated Server from GitHub')
