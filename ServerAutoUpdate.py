@@ -166,10 +166,32 @@ def main(github_token=None, github_repo=None, server_version=None):
     for asset in target_release.get_assets():
         if 'Linux' in asset.name and asset.name.endswith('.zip'):
             print_info(f"Found target release asset: {asset.name}")
+
+            # Check if this version is already installed locally
+            version_file = ".installed_version"
+            version_marker = f"{repo_target}:{target_release.tag_name}:{asset.name}"
+            binary_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "FireworksManiaDedicatedLinux.x86_64")
+
+            if os.path.exists(version_file) and os.path.exists(binary_path):
+                try:
+                    with open(version_file, "r") as f:
+                        installed_marker = f.read().strip()
+                    if installed_marker == version_marker:
+                        print_success(f"Server is already up-to-date ({target_release.tag_name}). Skipping download.")
+                        return
+                except Exception:
+                    pass
+
+            print_info(f"Downloading and installing server release '{target_release.tag_name}'...")
             if download_asset(asset, asset.name, token):
                 if extract_zip(asset.name):
+                    try:
+                        with open(version_file, "w") as f:
+                            f.write(version_marker)
+                    except Exception:
+                        pass
                     print(f"{CLR_GREEN}================================================={CLR_RESET}")
-                    print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Server Successfully Installed{CLR_RESET}")
+                    print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Server Successfully Installed / Updated{CLR_RESET}")
                     print(f"{CLR_GREEN}================================================={CLR_RESET}")
                     return
             return

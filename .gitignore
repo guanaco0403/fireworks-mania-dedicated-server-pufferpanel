@@ -10,6 +10,7 @@ ENV/
 # PufferPanel server runtime artifacts
 host.config
 modio.token
+.installed_version
 *.zip
 FireworksManiaDedicatedLinux.x86_64
 FireworksManiaDedicatedLinux_Data/
