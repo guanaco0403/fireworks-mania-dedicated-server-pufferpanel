@@ -26,10 +26,10 @@ This repository provides a custom [PufferPanel](https://www.pufferpanel.com/) te
 
 ### Import via Custom Template Repository URL 
 1. In PufferPanel, navigate to **Templates** -> **Repositories**.
-2. Set the repository name to `"Fireworks Mania Dedicated Server"` for exemple.
+2. Set the repository name to `Fireworks Mania Dedicated Server` for exemple.
 3. Add this GitHub repository URL:
    `https://github.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel`
-4. Set the `"main"` branch
+4. Set the `main` branch
 5. Click on the **Import Repository Reference** button.
 
 ---
