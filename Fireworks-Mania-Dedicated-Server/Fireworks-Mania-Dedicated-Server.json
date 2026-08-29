@@ -35,14 +35,14 @@
             "value": "Laumania/FireworksMania.DedicatedServer",
             "display": "Dedicated Server Repository (owner/repo)",
             "required": false,
-            "userEdit": false
+            "userEdit": true
         },
         "github-token": {
             "type": "string",
             "value": "",
             "display": "GitHub Token (for Auto Updater)",
             "required": false,
-            "userEdit": false
+            "userEdit": true
         },
         "ignition-forces-enabled": {
             "type": "boolean",
@@ -84,7 +84,7 @@
             "value": "",
             "display": "mod.io Personal Access Token",
             "required": false,
-            "userEdit": false
+            "userEdit": true
         },
         "server-author": {
             "type": "string",
@@ -140,7 +140,7 @@
             "value": "latest",
             "display": "Server Version / Release Tag (latest or tag name e.g. v1.2.0)",
             "required": false,
-            "userEdit": false
+            "userEdit": true
         },
         "spawn-delay": {
             "type": "string",
@@ -206,7 +206,7 @@
         {
             "type": "command",
             "commands": [
-                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
+                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?$(date +%s)\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
             ]
         }
     ],
@@ -218,7 +218,7 @@
             {
                 "type": "command",
                 "commands": [
-                    "chmod +x FireworksManiaDedicatedLinux.x86_64"
+                    "sh -c \"curl -sSL -o ServerAutoUpdate.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?$(date +%s)\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" && chmod +x FireworksManiaDedicatedLinux.x86_64 || true\""
                 ]
             },
             {
