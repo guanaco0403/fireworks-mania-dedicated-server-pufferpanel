@@ -183,7 +183,7 @@
         {
             "type": "command",
             "commands": [
-                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py https://raw.githubusercontent.com/guanaco0403/YOUR_REPOSITORY/main/ServerAutoUpdate.py && python3 ServerAutoUpdate.py ${github-token} || true\""
+                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py && python3 ServerAutoUpdate.py ${github-token} || true\""
             ]
         }
     ],
