@@ -16,9 +16,18 @@ This repository provides a custom [PufferPanel](https://www.pufferpanel.com/) te
     └── README.md
 ```
 
-- **`ServerAutoUpdate.py`**: Python script that fetches and extracts the latest dedicated server release from [Laumania/FireworksMania.DedicatedServer](https://github.com/Laumania/FireworksMania.DedicatedServer).
+- **`ServerAutoUpdate.py`**: Python script that fetches and extracts the target dedicated server release (defaults to [Laumania/FireworksMania.DedicatedServer](https://github.com/Laumania/FireworksMania.DedicatedServer)).
 - **`Fireworks-Mania-Dedicated-Server/Fireworks-Mania-Dedicated-Server.json`**: PufferPanel template definition file.
 - **`Fireworks-Mania-Dedicated-Server/README.md`**: Template metadata and variable documentation for PufferPanel.
+
+---
+
+## ⚙️ Features & Advanced Settings
+
+- **Default Behavior**: Downloads the **latest** Linux server release from `Laumania/FireworksMania.DedicatedServer`.
+- **Custom Repository & Versions**: Under **Advanced Settings** in PufferPanel, you can specify:
+  - **`github-repo`**: Change the source repository (e.g. `CustomOwner/CustomRepo`). Defaults to `Laumania/FireworksMania.DedicatedServer`.
+  - **`server-version`**: Target a specific version or release tag (e.g. `latest` or `v1.2.0`).
 
 ---
 

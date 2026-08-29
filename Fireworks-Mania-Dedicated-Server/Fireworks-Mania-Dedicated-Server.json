@@ -30,6 +30,13 @@
             "required": true,
             "userEdit": true
         },
+        "github-repo": {
+            "type": "string",
+            "value": "Laumania/FireworksMania.DedicatedServer",
+            "display": "Dedicated Server Repository (owner/repo)",
+            "required": false,
+            "userEdit": false
+        },
         "github-token": {
             "type": "string",
             "value": "",
@@ -128,6 +135,13 @@
             "required": true,
             "userEdit": false
         },
+        "server-version": {
+            "type": "string",
+            "value": "latest",
+            "display": "Server Version / Release Tag (latest or tag name e.g. v1.2.0)",
+            "required": false,
+            "userEdit": false
+        },
         "spawn-delay": {
             "type": "string",
             "value": "0.2",
@@ -162,8 +176,6 @@
                 "server-author",
                 "server-map",
                 "server-mods",
-                "modio-token",
-                "github-token",
                 "locked-items"
             ],
             "order": 1
@@ -177,13 +189,24 @@
                 "server-port"
             ],
             "order": 2
+        },
+        {
+            "display": "Advanced Settings",
+            "description": "Advanced server release repository & updater configuration",
+            "variables": [
+                "github-repo",
+                "server-version",
+                "github-token",
+                "modio-token"
+            ],
+            "order": 3
         }
     ],
     "install": [
         {
             "type": "command",
             "commands": [
-                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py && python3 ServerAutoUpdate.py ${github-token} || true\""
+                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
             ]
         }
     ],
