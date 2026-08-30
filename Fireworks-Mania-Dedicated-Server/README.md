@@ -6,7 +6,7 @@ This PufferPanel template for installing, configuring, and managing a [Fireworks
 
 - **Type**: **Fireworks-Mania**
 - **Display**: **Fireworks-Mania-Dedicated-Server**
-- **Environment**: Docker (**pufferpanel/ubuntu**)
+- **Environment**: Docker (**python:3.12-slim**)
 
 ## Prerequisites
 

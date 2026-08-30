@@ -56,17 +56,35 @@ def find_server_process():
                     break
         except Exception:
             pass
-    else:
-        # Fallback to ps / pgrep if psutil is not available
+    # Pure Python /proc scan fallback for Linux (no pgrep/subprocess stderr output)
+    if pid is None and os.path.exists('/proc'):
         try:
-            cmd = f"pgrep -f {SERVER_BIN_NAME}"
-            output = subprocess.check_output(cmd, shell=True, text=True).strip()
-            if output:
-                pids = output.split()
-                pid = int(pids[0])
-                proc_uptime = int(time.time() - start_time)
+            for pdir in os.listdir('/proc'):
+                if pdir.isdigit():
+                    cmdline_path = os.path.join('/proc', pdir, 'cmdline')
+                    if os.path.exists(cmdline_path):
+                        try:
+                            with open(cmdline_path, 'rb') as f:
+                                content = f.read().replace(b'\x00', b' ').decode('utf-8', errors='replace')
+                                if SERVER_BIN_NAME in content:
+                                    pid = int(pdir)
+                                    try:
+                                        stat_path = os.path.join('/proc', pdir, 'stat')
+                                        with open(stat_path, 'r') as sf:
+                                            fields = sf.read().split()
+                                            start_clk = int(fields[21])
+                                            with open('/proc/uptime', 'r') as uf:
+                                                sys_uptime = float(uf.read().split()[0])
+                                            clk_tck = os.sysconf('SC_CLK_TCK') if hasattr(os, 'sysconf') else 100
+                                            proc_start_sec = start_clk / clk_tck
+                                            proc_uptime = int(sys_uptime - proc_start_sec)
+                                    except Exception:
+                                        proc_uptime = int(time.time() - start_time)
+                                    break
+                        except Exception:
+                            pass
         except Exception:
-            pid = None
+            pass
 
     return {
         "running": pid is not None,
