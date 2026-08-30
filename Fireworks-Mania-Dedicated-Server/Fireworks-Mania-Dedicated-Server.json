@@ -214,7 +214,11 @@
         {
             "type": "command",
             "commands": [
-                "sh -c \"apt-get update && apt-get install -y --no-install-recommends ca-certificates && pip install --no-cache-dir requests PyGithub && python3 -c \\\"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
+                "apt-get update",
+                "apt-get install -y --no-install-recommends ca-certificates",
+                "pip install --no-cache-dir requests PyGithub",
+                "python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\"",
+                "python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\""
             ]
         }
     ],
@@ -226,12 +230,12 @@
             {
                 "type": "writefile",
                 "target": "start.sh",
-                "text": "#!/bin/sh\nif [ \"${auto-update-on-start}\" = \"true\" ] || [ \"${auto-update-on-start}\" = \"True\" ]; then\n    pip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\n    python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\n    python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nfi\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
+                "text": "#!/bin/sh\nif [ \"${auto-update-on-start}\" = \"true\" ] || [ \"${auto-update-on-start}\" = \"True\" ]; then\n    pip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\n    python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\n    python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nfi\nchmod +x FireworksManiaDedicatedLinux.x86_64 2>/dev/null || true\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
             },
             {
                 "type": "command",
                 "commands": [
-                    "chmod +x start.sh FireworksManiaDedicatedLinux.x86_64"
+                    "chmod +x start.sh"
                 ]
             },
             {
