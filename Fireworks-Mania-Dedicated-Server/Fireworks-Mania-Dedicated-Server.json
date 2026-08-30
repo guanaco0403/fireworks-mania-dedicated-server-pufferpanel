@@ -149,6 +149,13 @@
             "required": true,
             "userEdit": true
         },
+        "web-gui-port": {
+            "type": "integer",
+            "value": 8080,
+            "display": "Web GUI Port (HTTP)",
+            "required": true,
+            "userEdit": true
+        },
         "who-can-join": {
             "type": "integer",
             "value": 0,
@@ -186,7 +193,8 @@
             "variables": [
                 "who-can-join",
                 "server-ip",
-                "server-port"
+                "server-port",
+                "web-gui-port"
             ],
             "order": 2
         },
@@ -206,13 +214,13 @@
         {
             "type": "command",
             "commands": [
-                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github curl ca-certificates && curl -sSL -o ServerAutoUpdate.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?$(date +%s)\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
+                "sh -c \"DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github python3-psutil curl ca-certificates && curl -sSL -o ServerAutoUpdate.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?$(date +%s)\\\" && curl -sSL -o ServerWebGUI.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?$(date +%s)\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
             ]
         }
     ],
     "uninstall": null,
     "run": {
-        "command": "./FireworksManiaDedicatedLinux.x86_64",
+        "command": "sh -c \"python3 ServerWebGUI.py --port ${web-gui-port} & exec ./FireworksManiaDedicatedLinux.x86_64\"",
         "stop": "quit",
         "pre": [
             {
@@ -245,7 +253,18 @@
         "containerRoot": "",
         "networkName": "host",
         "bindings": {},
-        "portBindings": []
+        "portBindings": [
+            {
+                "host": "${server-port}",
+                "container": "${server-port}",
+                "protocol": "udp"
+            },
+            {
+                "host": "${web-gui-port}",
+                "container": "${web-gui-port}",
+                "protocol": "tcp"
+            }
+        ]
     },
     "supportedEnvironments": [
         {
@@ -254,7 +273,18 @@
             "containerRoot": "",
             "networkName": "host",
             "bindings": {},
-            "portBindings": []
+            "portBindings": [
+                {
+                    "host": "${server-port}",
+                    "container": "${server-port}",
+                    "protocol": "udp"
+                },
+                {
+                    "host": "${web-gui-port}",
+                    "container": "${web-gui-port}",
+                    "protocol": "tcp"
+                }
+            ]
         }
     ],
     "requirements": {},
