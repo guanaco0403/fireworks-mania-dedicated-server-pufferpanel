@@ -4,6 +4,13 @@ import json
 import time
 import argparse
 import threading
+import subprocess
+import select
+try:
+    import pty
+except ImportError:
+    pty = None
+
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
@@ -19,6 +26,55 @@ SERVER_LOG_FILES = [
     os.path.expanduser("~/.config/unity3d/Laumania/Fireworks Mania/Player.log"),
     "Player.log"
 ]
+
+game_process = None
+master_pty_fd = None
+
+def launch_game_server_pty():
+    """Launch the Unity dedicated server process inside a PTY pseudo-terminal."""
+    global game_process, master_pty_fd
+
+    executable = f"./{SERVER_BIN_NAME}"
+    if not os.path.exists(executable):
+        print(f"[ERROR] Executable {executable} not found!", flush=True)
+        return
+
+    if pty is None:
+        print("[WARN] pty module unavailable on this OS. Falling back to external process execution.", flush=True)
+        return
+
+    try:
+        master_fd, slave_fd = pty.openpty()
+        master_pty_fd = master_fd
+
+        game_process = subprocess.Popen(
+            [executable],
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            close_fds=True,
+            preexec_fn=os.setsid if hasattr(os, 'setsid') else None
+        )
+        os.close(slave_fd)
+        print(f"[INFO] Launched {SERVER_BIN_NAME} inside PTY (PID: {game_process.pid})", flush=True)
+
+        def io_pump():
+            while True:
+                try:
+                    r, _, _ = select.select([master_fd], [], [], 0.5)
+                    if master_fd in r:
+                        data = os.read(master_fd, 4096)
+                        if not data:
+                            break
+                        sys.stdout.buffer.write(data)
+                        sys.stdout.buffer.flush()
+                except Exception:
+                    break
+
+        t = threading.Thread(target=io_pump, daemon=True)
+        t.start()
+    except Exception as e:
+        print(f"[ERROR] Failed to start game server in PTY: {e}", flush=True)
 
 def find_server_process():
     """Check if the dedicated server process PID is running."""
@@ -40,30 +96,38 @@ def find_server_process():
         except Exception:
             pass
     return {
-        "running": pid is not None,
-        "pid": pid
+        "running": pid is not None or (game_process is not None and game_process.poll() is None),
+        "pid": pid or (game_process.pid if game_process else None)
     }
 
 def send_server_command(cmd_string):
-    """Inject a command into the running server process stdin."""
+    """Inject a command into the running server process stdin via PTY master descriptor."""
+    global master_pty_fd
     if not cmd_string or not cmd_string.strip():
         return False, "Command cannot be empty."
 
     raw_cmd = cmd_string.strip()
     cmd_bytes = (raw_cmd + "\r\n").encode('utf-8')
-    success = False
 
-    # Method 1: FIFO Pipe (server_input.fifo)
+    # Method 1: PTY Master Descriptor
+    if master_pty_fd is not None:
+        try:
+            os.write(master_pty_fd, cmd_bytes)
+            return True, f"Command sent: {raw_cmd}"
+        except Exception as e:
+            print(f"[WARN] Failed writing to PTY descriptor: {e}", flush=True)
+
+    # Method 2: FIFO Pipe
     if os.path.exists(FIFO_PIPE_FILE):
         try:
             with open(FIFO_PIPE_FILE, "wb") as f:
                 f.write(cmd_bytes)
                 f.flush()
-            success = True
+            return True, f"Command sent via FIFO: {raw_cmd}"
         except Exception:
             pass
 
-    # Method 2: Process stdin /proc/<pid>/fd/0
+    # Method 3: Process stdin /proc/<pid>/fd/0
     proc_info = find_server_process()
     pid = proc_info.get("pid")
     if pid:
@@ -73,22 +137,10 @@ def send_server_command(cmd_string):
                 with open(stdin_path, "wb") as f:
                     f.write(cmd_bytes)
                     f.flush()
-                success = True
+                return True, f"Command sent via /proc/{pid}/fd/0: {raw_cmd}"
         except Exception:
             pass
 
-    # Method 3: Container stdin /proc/1/fd/0
-    if os.path.exists("/proc/1/fd/0") and (not pid or pid != 1):
-        try:
-            with open("/proc/1/fd/0", "wb") as f:
-                f.write(cmd_bytes)
-                f.flush()
-            success = True
-        except Exception:
-            pass
-
-    if success:
-        return True, f"Command sent: {raw_cmd}"
     return False, "Server process is not running or stdin is unavailable."
 
 def parse_connected_players():
@@ -980,14 +1032,18 @@ def monitor_game_server_ready(host, port, timeout=120):
             break
         time.sleep(1)
 
-def run_server(host='0.0.0.0', port=8080):
+def run_server(host='0.0.0.0', port=8080, launch_server=False):
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, WebGUIRequestHandler)
     print(f"[INFO] Fireworks Mania Web GUI service listening on http://{host}:{port}", flush=True)
     
     t1 = threading.Thread(target=monitor_game_server_ready, args=(host, port), daemon=True)
     t1.start()
-    
+
+    if launch_server:
+        print("[INFO] Launching game server inside PTY wrapper...", flush=True)
+        launch_game_server_pty()
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -998,6 +1054,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Fireworks Mania Dedicated Server Web GUI")
     parser.add_argument('--port', type=int, default=8080, help="Port to run the Web GUI on (default: 8080)")
     parser.add_argument('--host', type=str, default='0.0.0.0', help="Host address to bind to (default: 0.0.0.0)")
+    parser.add_argument('--launch-server', action='store_true', help="Launch the dedicated server process directly inside a PTY")
     args = parser.parse_args()
 
-    run_server(host=args.host, port=args.port)
+    run_server(host=args.host, port=args.port, launch_server=args.launch_server)
