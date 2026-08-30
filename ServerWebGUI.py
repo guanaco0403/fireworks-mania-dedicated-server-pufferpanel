@@ -11,6 +11,7 @@ SERVER_BIN_NAME = "FireworksManiaDedicatedLinux.x86_64"
 VERSION_FILE = ".installed_version"
 HOST_CONFIG_FILE = "host.config"
 MODIO_TOKEN_FILE = "modio.token"
+FIFO_PIPE_FILE = "server_input.fifo"
 
 def find_server_process():
     """Check if the dedicated server process PID is running."""
@@ -35,6 +36,39 @@ def find_server_process():
         "running": pid is not None,
         "pid": pid
     }
+
+def send_server_command(cmd_string):
+    """Inject a command into the running server process stdin."""
+    if not cmd_string or not cmd_string.strip():
+        return False, "Command cannot be empty."
+
+    clean_cmd = cmd_string.strip() + "\n"
+
+    # Method 1: FIFO Pipe (server_input.fifo)
+    if os.path.exists(FIFO_PIPE_FILE):
+        try:
+            with open(FIFO_PIPE_FILE, "w", encoding="utf-8") as f:
+                f.write(clean_cmd)
+                f.flush()
+            return True, f"Command sent: {cmd_string.strip()}"
+        except Exception:
+            pass
+
+    # Method 2: Direct /proc/<pid>/fd/0 injection
+    proc_info = find_server_process()
+    pid = proc_info.get("pid")
+    if pid:
+        stdin_path = f"/proc/{pid}/fd/0"
+        try:
+            if os.path.exists(stdin_path):
+                with open(stdin_path, "wb") as f:
+                    f.write(clean_cmd.encode('utf-8'))
+                    f.flush()
+                return True, f"Command sent: {cmd_string.strip()}"
+        except Exception as e:
+            return False, f"Failed to write to stdin: {e}"
+
+    return False, "Server process is not running or stdin is unavailable."
 
 def read_host_config():
     """Read host.config JSON if available."""
@@ -72,8 +106,8 @@ HTML_PAGE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fireworks Mania Server Info Web GUI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Fireworks Mania Server Control Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -86,6 +120,7 @@ HTML_PAGE = """<!DOCTYPE html>
             --accent-purple: #c084fc;
             --accent-green: #34d399;
             --accent-red: #f87171;
+            --accent-yellow: #fbbf24;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -169,7 +204,8 @@ HTML_PAGE = """<!DOCTYPE html>
             box-shadow: 0 0 10px currentColor;
         }
 
-        .grid-details {
+        /* Control Panel Grid */
+        .controls-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
             gap: 1.5rem;
@@ -194,6 +230,93 @@ HTML_PAGE = """<!DOCTYPE html>
             color: var(--text-primary);
         }
 
+        /* Action Buttons */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            background: rgba(30, 41, 59, 0.8);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn:hover {
+            background: rgba(51, 65, 85, 1);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: var(--accent-red);
+            color: #fff;
+        }
+
+        .btn-warning {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-yellow);
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(251, 191, 36, 0.3);
+            border-color: var(--accent-yellow);
+            color: #fff;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        /* Form Inputs */
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Info Tables */
         .info-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .info-table tr { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
         .info-table tr:last-child { border-bottom: none; }
@@ -222,6 +345,95 @@ HTML_PAGE = """<!DOCTYPE html>
             border: 1px solid rgba(248, 113, 113, 0.3);
         }
 
+        /* Toast Popup */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: #1e293b;
+            color: #fff;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .toast.success { border-color: var(--accent-green); color: var(--accent-green); }
+        .toast.error { border-color: var(--accent-red); color: var(--accent-red); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal Popup */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(3, 7, 18, 0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 440px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.25s ease;
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .modal-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
         footer {
             margin-top: 2rem;
             text-align: center;
@@ -239,7 +451,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 <div class="brand-icon">🎆</div>
                 <div class="brand-title">
                     <h1>Fireworks Mania Server</h1>
-                    <p>Dedicated Server Information</p>
+                    <p>Interactive Dedicated Server Control & Management</p>
                 </div>
             </div>
             <div id="status-badge" class="status-badge offline">
@@ -248,6 +460,59 @@ HTML_PAGE = """<!DOCTYPE html>
             </div>
         </header>
 
+        <!-- Quick Controls Grid -->
+        <div class="controls-grid">
+            <!-- Server Control Buttons -->
+            <div class="card">
+                <div class="section-title">⚡ Quick Controls</div>
+                <div class="btn-group">
+                    <button class="btn btn-warning" onclick="sendQuickAction('clear_fireworks')">🧹 Clear All Fireworks</button>
+                    <button class="btn" onclick="openBroadcastModal()">📢 Broadcast Message</button>
+                </div>
+
+                <div style="margin-top:1rem; margin-bottom:0.5rem;" class="info-label">Set Time of Day</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="sendQuickAction('set_time_of_day', {time: 12})">☀️ Day (12:00)</button>
+                    <button class="btn" onclick="sendQuickAction('set_time_of_day', {time: 18})">🌅 Sunset (18:00)</button>
+                    <button class="btn" onclick="sendQuickAction('set_time_of_day', {time: 0})">🌙 Night (00:00)</button>
+                </div>
+
+                <div style="margin-top:1rem; margin-bottom:0.5rem;" class="info-label">Set Weather</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="sendQuickAction('set_weather', {weather: 'Clear'})">🌤️ Clear</button>
+                    <button class="btn" onclick="sendQuickAction('set_weather', {weather: 'Rain'})">🌧️ Rain</button>
+                    <button class="btn" onclick="sendQuickAction('set_weather', {weather: 'Storm'})">🌩️ Storm</button>
+                    <button class="btn" onclick="sendQuickAction('set_weather', {weather: 'Fog'})">🌫️ Fog</button>
+                </div>
+            </div>
+
+            <!-- Player Kick / Ban Management -->
+            <div class="card">
+                <div class="section-title">👥 Player Actions (Kick & Ban)</div>
+                <div class="modal-desc">Type a player name or ID to Kick or Ban with a custom reason popup.</div>
+                
+                <div class="input-group">
+                    <input type="text" id="player-target-input" class="input-field" placeholder="Player Name or ID...">
+                </div>
+                <div class="btn-group" style="margin-top:0.5rem;">
+                    <button class="btn btn-warning" onclick="openPlayerModal('kick')">🛑 Kick Player</button>
+                    <button class="btn btn-danger" onclick="openPlayerModal('ban')">🔨 Ban Player</button>
+                </div>
+            </div>
+
+            <!-- Console Command Injection -->
+            <div class="card">
+                <div class="section-title">💻 Execute Console Command</div>
+                <div class="modal-desc">Send any Quantum Processor console command directly to the server.</div>
+                
+                <div class="input-group">
+                    <input type="text" id="raw-command-input" class="input-field" placeholder="e.g. fm-host-settimeofday 15" onkeydown="if(event.key==='Enter') executeRawCommand()">
+                    <button class="btn btn-primary" onclick="executeRawCommand()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Information Details Grid -->
         <div class="grid-details">
             <div class="card">
                 <div class="section-title">🌐 Network & Connection</div>
@@ -289,13 +554,133 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
 
         <footer>
-            Fireworks Mania Dedicated Server Web GUI &bull; PufferPanel Integration
+            Fireworks Mania Dedicated Server Control GUI &bull; PufferPanel Integration
         </footer>
     </div>
 
+    <!-- Reusable Action Modal -->
+    <div id="action-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="modal-header-title" class="modal-title">Action Confirmation</div>
+            <div id="modal-header-desc" class="modal-desc">Please specify the details for this action.</div>
+            
+            <div id="modal-body">
+                <!-- Dynamic Input Container -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button id="modal-submit-btn" class="btn btn-primary" onclick="submitModal()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
     <script>
+        let currentModalAction = null;
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = type === 'success' ? `✅ ${message}` : `❌ ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
         function createPill(enabled) {
             return enabled ? '<span class="toggle-pill enabled">ENABLED</span>' : '<span class="toggle-pill disabled">DISABLED</span>';
+        }
+
+        async function sendApiCommand(payload) {
+            try {
+                const res = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || 'Command executed successfully!', 'success');
+                } else {
+                    showToast(data.message || 'Failed to execute command.', 'error');
+                }
+            } catch (err) {
+                showToast('Error connecting to server backend.', 'error');
+            }
+        }
+
+        function sendQuickAction(action, extra = {}) {
+            sendApiCommand({ action: action, ...extra });
+        }
+
+        function executeRawCommand() {
+            const input = document.getElementById('raw-command-input');
+            const val = input.value.trim();
+            if (!val) return;
+            sendApiCommand({ action: 'raw_command', command: val });
+            input.value = '';
+        }
+
+        function openBroadcastModal() {
+            currentModalAction = 'broadcast';
+            document.getElementById('modal-header-title').textContent = '📢 Broadcast Message';
+            document.getElementById('modal-header-desc').textContent = 'Enter a message to display to all connected players.';
+            document.getElementById('modal-body').innerHTML = `
+                <input type="text" id="modal-input-msg" class="input-field" style="width:100%" placeholder="Type message here...">
+            `;
+            document.getElementById('modal-submit-btn').className = 'btn btn-primary';
+            document.getElementById('action-modal').classList.add('active');
+            setTimeout(() => document.getElementById('modal-input-msg').focus(), 100);
+        }
+
+        function openPlayerModal(type) {
+            const targetVal = document.getElementById('player-target-input').value.trim();
+            if (!targetVal) {
+                showToast('Please enter a Player Name or ID first.', 'error');
+                document.getElementById('player-target-input').focus();
+                return;
+            }
+
+            currentModalAction = type;
+            const isKick = type === 'kick';
+            document.getElementById('modal-header-title').textContent = isKick ? `🛑 Kick Player: ${targetVal}` : `🔨 Ban Player: ${targetVal}`;
+            document.getElementById('modal-header-desc').textContent = `Please specify a reason for this ${isKick ? 'kick' : 'ban'}.`;
+            document.getElementById('modal-body').innerHTML = `
+                <input type="text" id="modal-input-reason" class="input-field" style="width:100%" placeholder="Enter ${isKick ? 'kick' : 'ban'} reason...">
+            `;
+            document.getElementById('modal-submit-btn').className = isKick ? 'btn btn-warning' : 'btn btn-danger';
+            document.getElementById('action-modal').classList.add('active');
+            setTimeout(() => document.getElementById('modal-input-reason').focus(), 100);
+        }
+
+        function closeModal() {
+            document.getElementById('action-modal').classList.remove('active');
+            currentModalAction = null;
+        }
+
+        function submitModal() {
+            const targetVal = document.getElementById('player-target-input').value.trim();
+
+            if (currentModalAction === 'broadcast') {
+                const msg = document.getElementById('modal-input-msg').value.trim();
+                if (msg) {
+                    sendApiCommand({ action: 'broadcast_message', message: msg });
+                }
+            } else if (currentModalAction === 'kick') {
+                const reason = document.getElementById('modal-input-reason').value.trim() || 'Kicked by administrator';
+                sendApiCommand({ action: 'kick_player', target: targetVal, reason: reason });
+            } else if (currentModalAction === 'ban') {
+                const reason = document.getElementById('modal-input-reason').value.trim() || 'Banned by administrator';
+                sendApiCommand({ action: 'ban_player', target: targetVal, reason: reason });
+            }
+
+            closeModal();
         }
 
         async function fetchData() {
@@ -412,6 +797,47 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
                 "modio_token_configured": read_modio_status()
             }
             self.send_json(payload)
+        else:
+            self.send_json({"error": "Not Found"}, 404)
+
+    def do_POST(self):
+        path = self.path.split('?')[0]
+        if path == '/api/command':
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                data = json.loads(post_data.decode('utf-8'))
+                
+                action = data.get("action")
+                success, msg = False, "Unknown action"
+
+                if action == "clear_fireworks":
+                    success, msg = send_server_command("fm-host-clear_fireworks")
+                elif action == "broadcast_message":
+                    message = data.get("message", "")
+                    success, msg = send_server_command(f'fm-host-message "{message}"')
+                elif action == "set_time_of_day":
+                    time_val = data.get("time", 12)
+                    success, msg = send_server_command(f'fm-host-settimeofday {time_val}')
+                elif action == "set_weather":
+                    weather = data.get("weather", "Clear")
+                    success, msg = send_server_command(f'fm-host-weather {weather}')
+                elif action == "kick_player":
+                    target = data.get("target", "")
+                    reason = data.get("reason", "Kicked by administrator")
+                    success, msg = send_server_command(f'fm-host-kick_player "{target}" "{reason}"')
+                elif action == "ban_player":
+                    target = data.get("target", "")
+                    reason = data.get("reason", "Banned by administrator")
+                    success, msg = send_server_command(f'fm-host-ban_player "{target}" "{reason}"')
+                elif action == "raw_command":
+                    cmd = data.get("command", "")
+                    success, msg = send_server_command(cmd)
+
+                status_code = 200 if success else 400
+                self.send_json({"success": success, "message": msg}, status_code)
+            except Exception as e:
+                self.send_json({"success": False, "message": str(e)}, 500)
         else:
             self.send_json({"error": "Not Found"}, 404)
 
