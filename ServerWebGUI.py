@@ -59,17 +59,23 @@ def launch_game_server_pty():
         print(f"[INFO] Launched {SERVER_BIN_NAME} inside PTY (PID: {game_process.pid})", flush=True)
 
         def io_pump():
-            while True:
-                try:
-                    r, _, _ = select.select([master_fd], [], [], 0.5)
-                    if master_fd in r:
-                        data = os.read(master_fd, 4096)
-                        if not data:
+            try:
+                with open("server.log", "ab") as log_f:
+                    while True:
+                        try:
+                            r, _, _ = select.select([master_fd], [], [], 0.5)
+                            if master_fd in r:
+                                data = os.read(master_fd, 4096)
+                                if not data:
+                                    break
+                                sys.stdout.buffer.write(data)
+                                sys.stdout.buffer.flush()
+                                log_f.write(data)
+                                log_f.flush()
+                        except Exception:
                             break
-                        sys.stdout.buffer.write(data)
-                        sys.stdout.buffer.flush()
-                except Exception:
-                    break
+            except Exception:
+                pass
 
         t = threading.Thread(target=io_pump, daemon=True)
         t.start()
@@ -143,50 +149,64 @@ def send_server_command(cmd_string):
 
     return False, "Server process is not running or stdin is unavailable."
 
+import re
+
+def strip_ansi_and_tags(text):
+    clean = re.sub(r'\x1b\[[0-9;]*[mGKH]', '', text)
+    clean = re.sub(r'</?color[^>]*>', '', clean)
+    return clean.strip()
+
 def parse_connected_players():
     """Parse recent player list output from server log files."""
     for log_path in SERVER_LOG_FILES:
         if os.path.exists(log_path):
             try:
                 with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
-                    lines = f.readlines()
+                    raw_lines = f.readlines()
                     
-                    last_list_idx = -1
-                    is_empty = False
+                lines = [strip_ansi_and_tags(l) for l in raw_lines]
+                
+                last_list_idx = -1
+                is_empty = False
+                
+                for i in range(len(lines) - 1, -1, -1):
+                    line = lines[i]
+                    if "Nobody is in the game right now." in line:
+                        is_empty = True
+                        break
+                    if "player(s) in the game:" in line:
+                        last_list_idx = i
+                        break
+                
+                if is_empty:
+                    return []
+                
+                if last_list_idx != -1:
+                    players = []
+                    start_idx = last_list_idx + 1
+                    if start_idx < len(lines) and "ClientId" in lines[start_idx]:
+                        start_idx += 1
                     
-                    for i in range(len(lines) - 1, -1, -1):
-                        line = lines[i]
-                        if "Nobody is in the game right now." in line:
-                            is_empty = True
-                            break
-                        if "player(s) in the game:" in line:
-                            last_list_idx = i
-                            break
-                    
-                    if is_empty:
-                        return []
-                    
-                    if last_list_idx != -1:
-                        players = []
-                        start_idx = last_list_idx + 1
-                        if start_idx < len(lines) and "ClientId" in lines[start_idx]:
-                            start_idx += 1
-                        
-                        for j in range(start_idx, len(lines)):
-                            l = lines[j].strip()
-                            if not l or l.startswith("###") or l.startswith(">") or l.startswith("[") or "player(s)" in l or "Reconnect" in l:
+                    for j in range(start_idx, len(lines)):
+                        l = lines[j].strip()
+                        if not l:
+                            continue
+                        if l.startswith("###") or l.startswith(">") or "player(s)" in l or "Reconnect" in l or "VivoxVoice" in l:
+                            if len(players) > 0:
                                 break
-                            parts = l.split()
-                            if len(parts) >= 3:
-                                client_id = parts[0]
-                                username = parts[1]
-                                identifier = parts[2]
-                                players.append({
-                                    "client_id": client_id,
-                                    "username": username,
-                                    "identifier": identifier
-                                })
-                        return players
+                            else:
+                                continue
+                        parts = l.split()
+                        if len(parts) >= 3 and parts[0].isdigit():
+                            client_id = parts[0]
+                            username = parts[1]
+                            identifier = parts[2]
+                            players.append({
+                                "client_id": client_id,
+                                "username": username,
+                                "identifier": identifier
+                            })
+                    return players
             except Exception:
                 pass
     return []
