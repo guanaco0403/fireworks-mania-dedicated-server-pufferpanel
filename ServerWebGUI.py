@@ -725,18 +725,18 @@ HTML_PAGE = """<!DOCTYPE html>
                 document.getElementById('bar-disk').style.width = `${sys.disk_percent || 0}%`;
 
                 // Host Config
-                const host = data.host_config?.HostConfig || {};
-                const game = data.host_config?.GameConfig || {};
+                const host = (data.host_config && data.host_config.HostConfig) ? data.host_config.HostConfig : {};
+                const game = (data.host_config && data.host_config.GameConfig) ? data.host_config.GameConfig : {};
 
                 document.getElementById('cfg-name').textContent = host.Name || '--';
                 document.getElementById('cfg-desc').textContent = host.Description || '--';
                 document.getElementById('cfg-author').textContent = host.Author || '--';
                 document.getElementById('cfg-ip').textContent = host.IP || '--';
                 document.getElementById('cfg-port').textContent = host.Port ? `${host.Port} UDP` : '--';
-                document.getElementById('cfg-players').textContent = host.MaxPlayers ?? '--';
+                document.getElementById('cfg-players').textContent = (host.MaxPlayers !== undefined && host.MaxPlayers !== null) ? host.MaxPlayers : '--';
                 
                 const joinTypes = { 0: 'Everyone (0)', 1: 'Friends Only (1)' };
-                document.getElementById('cfg-join').textContent = joinTypes[host.WhoCanJoin] || (host.WhoCanJoin ?? '--');
+                document.getElementById('cfg-join').textContent = joinTypes[host.WhoCanJoin] || ((host.WhoCanJoin !== undefined && host.WhoCanJoin !== null) ? host.WhoCanJoin : '--');
 
                 document.getElementById('cfg-map').textContent = game.Map || '--';
                 document.getElementById('cfg-despawn').innerHTML = createPill(game.EnableAutoDespawnUsedFireworks);
@@ -746,8 +746,8 @@ HTML_PAGE = """<!DOCTYPE html>
                 document.getElementById('cfg-ignition').innerHTML = createPill(game.EnableIgnitionForces);
                 document.getElementById('cfg-delay').textContent = game.MinTimeBetweenPlayerSpawnInSeconds ? `${game.MinTimeBetweenPlayerSpawnInSeconds}s` : '--';
 
-                document.getElementById('cfg-max-fireworks').textContent = game.MaxAllowedPlayerSpawnedFireworks ?? '--';
-                document.getElementById('cfg-max-props').textContent = game.MaxAllowedPlayerSpawnedProps ?? '--';
+                document.getElementById('cfg-max-fireworks').textContent = (game.MaxAllowedPlayerSpawnedFireworks !== undefined && game.MaxAllowedPlayerSpawnedFireworks !== null) ? game.MaxAllowedPlayerSpawnedFireworks : '--';
+                document.getElementById('cfg-max-props').textContent = (game.MaxAllowedPlayerSpawnedProps !== undefined && game.MaxAllowedPlayerSpawnedProps !== null) ? game.MaxAllowedPlayerSpawnedProps : '--';
                 
                 const lockedArr = game.LockedInventoryEntityIds || [];
                 document.getElementById('cfg-locked').textContent = Array.isArray(lockedArr) ? `${lockedArr.length} item(s)` : '--';
