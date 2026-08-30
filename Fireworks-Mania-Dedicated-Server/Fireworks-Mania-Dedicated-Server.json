@@ -214,7 +214,7 @@
         {
             "type": "command",
             "commands": [
-                "sh -c \"apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && pip install --no-cache-dir requests PyGithub psutil && curl -sSL -o ServerAutoUpdate.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?$(date +%s)\\\" && curl -sSL -o ServerWebGUI.py \\\"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?$(date +%s)\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
+                "sh -c \"apt-get update && apt-get install -y --no-install-recommends ca-certificates && pip install --no-cache-dir requests PyGithub && python3 -c \\\"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py'); urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}', 'ServerWebGUI.py')\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
             ]
         }
     ],
