@@ -226,7 +226,7 @@
             {
                 "type": "writefile",
                 "target": "start.sh",
-                "text": "#!/bin/sh\ncurl -sSL -o ServerWebGUI.py \"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?$(date +%s)\"\npython3 ServerWebGUI.py --port ${web-gui-port} &\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
+                "text": "#!/bin/sh\npython3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}', 'ServerWebGUI.py')\" || true\npython3 ServerWebGUI.py --port ${web-gui-port} &\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
             },
             {
                 "type": "command",
