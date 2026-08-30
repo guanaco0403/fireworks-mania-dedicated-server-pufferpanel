@@ -9,6 +9,13 @@
             "required": true,
             "userEdit": true
         },
+        "auto-update-on-start": {
+            "type": "boolean",
+            "value": true,
+            "display": "Auto Update Server On Start",
+            "required": true,
+            "userEdit": true
+        },
         "enable-destructions": {
             "type": "boolean",
             "value": true,
@@ -194,6 +201,7 @@
             "display": "Advanced Settings",
             "description": "Advanced server release repository & updater configuration",
             "variables": [
+                "auto-update-on-start",
                 "github-repo",
                 "server-version",
                 "github-token",
@@ -218,7 +226,7 @@
             {
                 "type": "writefile",
                 "target": "start.sh",
-                "text": "#!/bin/sh\npip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\npython3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\npython3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
+                "text": "#!/bin/sh\nif [ \"${auto-update-on-start}\" = \"true\" ] || [ \"${auto-update-on-start}\" = \"True\" ]; then\n    pip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\n    python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\n    python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nfi\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
             },
             {
                 "type": "command",
