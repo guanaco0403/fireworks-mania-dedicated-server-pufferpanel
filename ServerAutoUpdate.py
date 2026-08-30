@@ -2,6 +2,8 @@ import argparse
 import os
 import requests
 import zipfile
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 from github import Github, BadCredentialsException, UnknownObjectException
 
 # ANSI Color Codes
@@ -94,7 +96,11 @@ def main(github_token=None, github_repo=None, server_version=None):
     if token:
         print_info(f"Using GitHub Token: {token[:4]}...{token[-4:]}")
         try:
-            g = Github(token)
+            try:
+                from github import Auth
+                g = Github(auth=Auth.Token(token))
+            except Exception:
+                g = Github(token)
             repo = g.get_repo(repo_target)
             print_success(f"Accessed repository: {repo.full_name} (Authenticated)")
         except BadCredentialsException:
