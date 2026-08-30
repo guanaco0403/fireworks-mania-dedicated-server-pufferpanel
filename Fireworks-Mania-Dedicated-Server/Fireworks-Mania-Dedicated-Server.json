@@ -65,13 +65,6 @@
             "required": true,
             "userEdit": true
         },
-        "max-cpu-cores": {
-            "type": "integer",
-            "value": 0,
-            "display": "Max CPU Cores Limit (0 = All Cores)",
-            "required": false,
-            "userEdit": true
-        },
         "max-fireworks": {
             "type": "integer",
             "value": 20,
@@ -91,13 +84,6 @@
             "value": 60,
             "display": "Max Player Spawned Props",
             "required": true,
-            "userEdit": true
-        },
-        "max-ram-mb": {
-            "type": "integer",
-            "value": 0,
-            "display": "Max RAM Limit in MB (0 = Unlimited)",
-            "required": false,
             "userEdit": true
         },
         "modio-token": {
@@ -215,8 +201,6 @@
             "display": "Advanced Settings",
             "description": "Advanced server release repository & updater configuration",
             "variables": [
-                "max-cpu-cores",
-                "max-ram-mb",
                 "auto-update-on-start",
                 "github-repo",
                 "server-version",
@@ -244,7 +228,7 @@
             {
                 "type": "writefile",
                 "target": "start.sh",
-                "text": "#!/bin/sh\nif [ \"${auto-update-on-start}\" = \"true\" ] || [ \"${auto-update-on-start}\" = \"True\" ]; then\n    pip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\n    python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\n    python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nfi\nchmod +x FireworksManiaDedicatedLinux.x86_64 2>/dev/null || true\n\nif [ \"${max-ram-mb}\" -gt 0 ] 2>/dev/null; then\n    RAM_KB=$((${max-ram-mb} * 1024))\n    ulimit -v $RAM_KB 2>/dev/null || true\nfi\n\nCPU_CMD=\"\"\nif [ \"${max-cpu-cores}\" -gt 0 ] 2>/dev/null; then\n    CORES_END=$((${max-cpu-cores} - 1))\n    if command -v taskset >/dev/null 2>&1; then\n        CPU_CMD=\"taskset -c 0-${CORES_END}\"\n    fi\nfi\n\nexec $CPU_CMD ./FireworksManiaDedicatedLinux.x86_64\n"
+                "text": "#!/bin/sh\nif [ \"${auto-update-on-start}\" = \"true\" ] || [ \"${auto-update-on-start}\" = \"True\" ]; then\n    pip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\n    python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\n    python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nfi\nchmod +x FireworksManiaDedicatedLinux.x86_64 2>/dev/null || true\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
             },
             {
                 "type": "command",

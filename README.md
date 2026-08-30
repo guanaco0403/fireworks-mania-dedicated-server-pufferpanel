@@ -26,9 +26,6 @@ This repository provides a custom [PufferPanel](https://www.pufferpanel.com/) te
 
 - **Automatic Downloads & Updates**: Downloads the target Linux server release from `Laumania/FireworksMania.DedicatedServer` (or a custom repository).
 - **Auto-Update On Start**: Option (`auto-update-on-start`, enabled by default) to automatically check for and apply new server updates every time the server starts.
-- **Resource Limits (CPU & RAM)**:
-  - **`max-ram-mb`**: Maximum RAM limit in Megabytes (`0` = Unlimited by default, e.g. `6144` for 6GB).
-  - **`max-cpu-cores`**: Number of allocated CPU cores (`0` = All Cores by default, e.g. `4` for 4 cores).
 - **Custom Repository & Versions**: Under **Advanced Settings** in PufferPanel:
   - **`auto-update-on-start`**: Toggle automatic update check on server startup (`true`/`false`).
   - **`github-repo`**: Change the source repository (e.g. `CustomOwner/CustomRepo`). Defaults to `Laumania/FireworksMania.DedicatedServer`.
@@ -55,8 +52,7 @@ When creating a server with this template in PufferPanel, you can configure:
 - **Server Info**: Name, Description, Author.
 - **Network**: Server IP (`0.0.0.0`), Server Port (`7777` UDP).
 - **Gameplay**: Max Players, Max Fireworks per player, Max Props, Auto-despawn, Physics forces, Map Destructions, Fly Mode, Spawn Delay, Locked Items.
-- **Resource Limits**: Max RAM in MB (`max-ram-mb`) and CPU Core count (`max-cpu-cores`).
-- **Mods**: Provide mod.io IDs as a JSON array (`[12345, 67890]`) and an optional `mod.io token` to download custom mods from mod.io.
+- **Mods**: Provide mod.io IDs as a JSON array (`[12345, 67890]`) and an optional `mod.io token` that is only required to download custom mods from mod.io.
 - **GitHub Token**: Optional PAT to prevent GitHub API rate limits when downloading server releases.
 
 ---
