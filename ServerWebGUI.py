@@ -12,6 +12,13 @@ VERSION_FILE = ".installed_version"
 HOST_CONFIG_FILE = "host.config"
 MODIO_TOKEN_FILE = "modio.token"
 FIFO_PIPE_FILE = "server_input.fifo"
+SERVER_LOG_FILES = [
+    "server.log",
+    "/pufferpanel/server.log",
+    os.path.expanduser("~/.config/unity3d/Laumania/FireworksMania/Player.log"),
+    os.path.expanduser("~/.config/unity3d/Laumania/Fireworks Mania/Player.log"),
+    "Player.log"
+]
 
 def find_server_process():
     """Check if the dedicated server process PID is running."""
@@ -69,6 +76,54 @@ def send_server_command(cmd_string):
             return False, f"Failed to write to stdin: {e}"
 
     return False, "Server process is not running or stdin is unavailable."
+
+def parse_connected_players():
+    """Parse recent player list output from server log files."""
+    for log_path in SERVER_LOG_FILES:
+        if os.path.exists(log_path):
+            try:
+                with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                    lines = f.readlines()
+                    
+                    last_list_idx = -1
+                    is_empty = False
+                    
+                    for i in range(len(lines) - 1, -1, -1):
+                        line = lines[i]
+                        if "Nobody is in the game right now." in line:
+                            is_empty = True
+                            break
+                        if "player(s) in the game:" in line:
+                            last_list_idx = i
+                            break
+                    
+                    if is_empty:
+                        return []
+                    
+                    if last_list_idx != -1:
+                        players = []
+                        start_idx = last_list_idx + 1
+                        if start_idx < len(lines) and "ClientId" in lines[start_idx]:
+                            start_idx += 1
+                        
+                        for j in range(start_idx, len(lines)):
+                            l = lines[j].strip()
+                            if not l or l.startswith("###") or l.startswith(">") or l.startswith("[") or "player(s)" in l or "Reconnect" in l:
+                                break
+                            parts = l.split()
+                            if len(parts) >= 3:
+                                client_id = parts[0]
+                                username = parts[1]
+                                identifier = parts[2]
+                                players.append({
+                                    "client_id": client_id,
+                                    "username": username,
+                                    "identifier": identifier
+                                })
+                        return players
+            except Exception:
+                pass
+    return []
 
 def read_host_config():
     """Read host.config JSON if available."""
@@ -225,8 +280,8 @@ HTML_PAGE = """<!DOCTYPE html>
             font-weight: 600;
             margin-bottom: 1rem;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.5rem;
             color: var(--text-primary);
         }
 
@@ -289,9 +344,7 @@ HTML_PAGE = """<!DOCTYPE html>
             border: none;
         }
 
-        .btn-primary:hover {
-            opacity: 0.9;
-        }
+        .btn-primary:hover { opacity: 0.9; }
 
         /* Form Inputs */
         .input-group {
@@ -312,15 +365,13 @@ HTML_PAGE = """<!DOCTYPE html>
             outline: none;
         }
 
-        .input-field:focus {
-            border-color: var(--accent-cyan);
-        }
+        .input-field:focus { border-color: var(--accent-cyan); }
 
-        /* Info Tables */
+        /* Tables */
         .info-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .info-table tr { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
         .info-table tr:last-child { border-bottom: none; }
-        .info-table td { padding: 0.65rem 0; font-size: 0.875rem; vertical-align: middle; }
+        .info-table td, .info-table th { padding: 0.65rem 0.5rem; font-size: 0.875rem; vertical-align: middle; }
 
         .info-label { color: var(--text-secondary); font-weight: 400; width: 45%; }
         .info-val { color: var(--text-primary); font-weight: 600; text-align: right; word-break: break-word; overflow-wrap: anywhere; }
@@ -410,22 +461,10 @@ HTML_PAGE = """<!DOCTYPE html>
             transition: transform 0.25s ease;
         }
 
-        .modal-overlay.active .modal-box {
-            transform: scale(1);
-        }
+        .modal-overlay.active .modal-box { transform: scale(1); }
 
-        .modal-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        .modal-desc {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 1.25rem;
-        }
+        .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary); }
+        .modal-desc { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem; }
 
         .modal-actions {
             display: flex;
@@ -451,7 +490,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 <div class="brand-icon">🎆</div>
                 <div class="brand-title">
                     <h1>Fireworks Mania Server</h1>
-                    <p>Interactive Dedicated Server Control & Management</p>
+                    <p>Interactive Dedicated Server Control Dashboard</p>
                 </div>
             </div>
             <div id="status-badge" class="status-badge offline">
@@ -459,6 +498,29 @@ HTML_PAGE = """<!DOCTYPE html>
                 <span id="status-text">Checking...</span>
             </div>
         </header>
+
+        <!-- Connected Players Live Table -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div class="section-title">
+                <span>🎮 Live Connected Players</span>
+                <span id="player-count-badge" class="toggle-pill enabled">0 Online</span>
+            </div>
+            <div id="player-list-container" style="overflow-x:auto;">
+                <table class="info-table">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border-color); color:var(--text-secondary); text-align:left;">
+                            <th style="width:15%;">Client ID</th>
+                            <th style="width:35%;">Username</th>
+                            <th style="width:30%;">Identifier / Steam ID</th>
+                            <th style="width:20%; text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="player-list-tbody">
+                        <tr><td colspan="4" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">No players currently connected.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <!-- Quick Controls Grid -->
         <div class="controls-grid">
@@ -468,6 +530,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 <div class="btn-group">
                     <button class="btn btn-warning" onclick="sendQuickAction('clear_fireworks')">🧹 Clear All Fireworks</button>
                     <button class="btn" onclick="openBroadcastModal()">📢 Broadcast Message</button>
+                    <button class="btn" onclick="sendQuickAction('refresh_players')">🔄 Refresh Players</button>
                 </div>
 
                 <div style="margin-top:1rem; margin-bottom:0.5rem;" class="info-label">Set Time of Day</div>
@@ -486,10 +549,10 @@ HTML_PAGE = """<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- Player Kick / Ban Management -->
+            <!-- Player Kick / Ban Manual Management -->
             <div class="card">
-                <div class="section-title">👥 Player Actions (Kick & Ban)</div>
-                <div class="modal-desc">Type a player name or ID to Kick or Ban with a custom reason popup.</div>
+                <div class="section-title">🛑 Manual Player Action</div>
+                <div class="modal-desc">Type a player username or ID manually to Kick or Ban with reason modal popup.</div>
                 
                 <div class="input-group">
                     <input type="text" id="player-target-input" class="input-field" placeholder="Player Name or ID...">
@@ -581,6 +644,11 @@ HTML_PAGE = """<!DOCTYPE html>
     <script>
         let currentModalAction = null;
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -607,6 +675,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 const data = await res.json();
                 if (data.success) {
                     showToast(data.message || 'Command executed successfully!', 'success');
+                    fetchData();
                 } else {
                     showToast(data.message || 'Failed to execute command.', 'error');
                 }
@@ -637,6 +706,11 @@ HTML_PAGE = """<!DOCTYPE html>
             document.getElementById('modal-submit-btn').className = 'btn btn-primary';
             document.getElementById('action-modal').classList.add('active');
             setTimeout(() => document.getElementById('modal-input-msg').focus(), 100);
+        }
+
+        function openPlayerModalDirect(type, username) {
+            document.getElementById('player-target-input').value = username;
+            openPlayerModal(type);
         }
 
         function openPlayerModal(type) {
@@ -697,6 +771,31 @@ HTML_PAGE = """<!DOCTYPE html>
                 } else {
                     badge.className = 'status-badge offline';
                     statusText.textContent = 'OFFLINE';
+                }
+
+                // Render Players Table
+                const players = data.players || [];
+                document.getElementById('player-count-badge').textContent = players.length + ' Online';
+
+                const tbody = document.getElementById('player-list-tbody');
+                if (players.length > 0) {
+                    let rowsHtml = '';
+                    players.forEach(p => {
+                        rowsHtml += `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                <td style="padding:0.65rem 0.5rem; font-weight:600; color:var(--text-secondary);">#${escapeHtml(p.client_id)}</td>
+                                <td style="padding:0.65rem 0.5rem; font-weight:700; color:var(--accent-cyan);">${escapeHtml(p.username)}</td>
+                                <td style="padding:0.65rem 0.5rem; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--text-secondary);">${escapeHtml(p.identifier)}</td>
+                                <td style="padding:0.65rem 0.5rem; text-align:right;">
+                                    <button class="btn btn-warning" style="padding:0.3rem 0.65rem; font-size:0.75rem;" onclick="openPlayerModalDirect('kick', '${escapeHtml(p.username)}')">🛑 Kick</button>
+                                    <button class="btn btn-danger" style="padding:0.3rem 0.65rem; font-size:0.75rem;" onclick="openPlayerModalDirect('ban', '${escapeHtml(p.username)}')">🔨 Ban</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = rowsHtml;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">No players currently connected.</td></tr>';
                 }
 
                 const host = (data.host_config && data.host_config.HostConfig) ? data.host_config.HostConfig : {};
@@ -792,6 +891,7 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
         elif path == '/api/status':
             payload = {
                 "server": find_server_process(),
+                "players": parse_connected_players(),
                 "host_config": read_host_config(),
                 "installed_version": read_installed_version(),
                 "modio_token_configured": read_modio_status()
@@ -830,6 +930,8 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
                     target = data.get("target", "")
                     reason = data.get("reason", "Banned by administrator")
                     success, msg = send_server_command(f'fm-host-ban_player "{target}" "{reason}"')
+                elif action == "refresh_players":
+                    success, msg = send_server_command("fm-host-list-players")
                 elif action == "raw_command":
                     cmd = data.get("command", "")
                     success, msg = send_server_command(cmd)
@@ -864,13 +966,28 @@ def monitor_game_server_ready(host, port, timeout=120):
             break
         time.sleep(1)
 
+def player_polling_loop():
+    """Background loop to query fm-host-list-players every 6 seconds."""
+    time.sleep(10)
+    while True:
+        try:
+            proc = find_server_process()
+            if proc.get("running"):
+                send_server_command("fm-host-list-players")
+        except Exception:
+            pass
+        time.sleep(6)
+
 def run_server(host='0.0.0.0', port=8080):
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, WebGUIRequestHandler)
     print(f"[INFO] Fireworks Mania Web GUI service listening on http://{host}:{port}", flush=True)
     
-    t = threading.Thread(target=monitor_game_server_ready, args=(host, port), daemon=True)
-    t.start()
+    t1 = threading.Thread(target=monitor_game_server_ready, args=(host, port), daemon=True)
+    t1.start()
+
+    t2 = threading.Thread(target=player_polling_loop, daemon=True)
+    t2.start()
     
     try:
         httpd.serve_forever()
