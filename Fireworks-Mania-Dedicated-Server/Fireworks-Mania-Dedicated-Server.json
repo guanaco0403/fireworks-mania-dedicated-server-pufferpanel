@@ -214,8 +214,6 @@
         {
             "type": "command",
             "commands": [
-                "apt-get update",
-                "apt-get install -y --no-install-recommends ca-certificates",
                 "pip install --no-cache-dir requests PyGithub",
                 "python3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\"",
                 "python3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\""
