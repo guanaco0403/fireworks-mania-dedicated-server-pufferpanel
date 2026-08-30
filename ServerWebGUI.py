@@ -1032,41 +1032,7 @@ def monitor_game_server_ready(host, port, timeout=120):
             break
         time.sleep(1)
 
-def self_update_and_restart():
-    """Auto-download latest ServerWebGUI.py from GitHub and overwrite local script if changed."""
-    if os.environ.get("SERVERWEBGUI_UPDATED") == "1":
-        return
-
-    url = f"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}"
-    current_script = os.path.abspath(__file__)
-
-    try:
-        import urllib.request
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0', 'Cache-Control': 'no-cache'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status == 200:
-                new_code = response.read().decode('utf-8')
-                
-                try:
-                    with open(current_script, 'r', encoding='utf-8') as f:
-                        current_code = f.read()
-                except Exception:
-                    current_code = ""
-
-                if new_code and len(new_code) > 500 and new_code != current_code:
-                    print(f"[INFO] Auto-updating {os.path.basename(current_script)} from GitHub...", flush=True)
-                    with open(current_script, 'w', encoding='utf-8') as f:
-                        f.write(new_code)
-                    print(f"[SUCCESS] Successfully updated {os.path.basename(current_script)}! Restarting script...", flush=True)
-                    
-                    env = dict(os.environ)
-                    env["SERVERWEBGUI_UPDATED"] = "1"
-                    os.execve(sys.executable, [sys.executable, current_script] + sys.argv[1:], env)
-    except Exception as e:
-        print(f"[WARN] Web GUI self-update check skipped ({e}).", flush=True)
-
 def run_server(host='0.0.0.0', port=8080, launch_server=False):
-    self_update_and_restart()
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, WebGUIRequestHandler)
     print(f"[INFO] Fireworks Mania Web GUI service listening on http://{host}:{port}", flush=True)
