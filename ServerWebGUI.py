@@ -194,13 +194,13 @@ HTML_PAGE = """<!DOCTYPE html>
             color: var(--text-primary);
         }
 
-        .info-table { width: 100%; border-collapse: collapse; }
+        .info-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .info-table tr { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
         .info-table tr:last-child { border-bottom: none; }
-        .info-table td { padding: 0.65rem 0; font-size: 0.875rem; }
+        .info-table td { padding: 0.65rem 0; font-size: 0.875rem; vertical-align: middle; }
 
         .info-label { color: var(--text-secondary); font-weight: 400; width: 45%; }
-        .info-val { color: var(--text-primary); font-weight: 600; text-align: right; }
+        .info-val { color: var(--text-primary); font-weight: 600; text-align: right; word-break: break-word; overflow-wrap: anywhere; }
 
         .toggle-pill {
             display: inline-block;
@@ -341,7 +341,18 @@ HTML_PAGE = """<!DOCTYPE html>
                 const lockedArr = game.LockedInventoryEntityIds || [];
                 document.getElementById('cfg-locked').textContent = Array.isArray(lockedArr) ? (lockedArr.length + ' item(s)') : '--';
 
-                document.getElementById('cfg-version').textContent = data.installed_version || 'Unknown';
+                let verText = data.installed_version || 'Unknown';
+                if (verText.indexOf(':') !== -1) {
+                    const parts = verText.split(':');
+                    const tag = parts[1] || '';
+                    const asset = parts[2] || '';
+                    if (tag && asset) {
+                        verText = tag + ' (' + asset.replace('.zip', '') + ')';
+                    } else if (tag) {
+                        verText = tag;
+                    }
+                }
+                document.getElementById('cfg-version').textContent = verText;
                 document.getElementById('cfg-modio').innerHTML = createPill(data.modio_token_configured);
 
                 const modsArr = game.Mods || [];
