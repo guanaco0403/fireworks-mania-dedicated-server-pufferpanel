@@ -151,7 +151,7 @@
         },
         "web-gui-port": {
             "type": "integer",
-            "value": 8080,
+            "value": 8888,
             "display": "Web GUI Port (HTTP)",
             "required": true,
             "userEdit": true
@@ -254,16 +254,8 @@
         "networkName": "host",
         "bindings": {},
         "portBindings": [
-            {
-                "host": "${server-port}",
-                "container": "${server-port}",
-                "protocol": "udp"
-            },
-            {
-                "host": "${web-gui-port}",
-                "container": "${web-gui-port}",
-                "protocol": "tcp"
-            }
+            "${server-port}:${server-port}/udp",
+            "${web-gui-port}:${web-gui-port}/tcp"
         ]
     },
     "supportedEnvironments": [
@@ -274,16 +266,8 @@
             "networkName": "host",
             "bindings": {},
             "portBindings": [
-                {
-                    "host": "${server-port}",
-                    "container": "${server-port}",
-                    "protocol": "udp"
-                },
-                {
-                    "host": "${web-gui-port}",
-                    "container": "${web-gui-port}",
-                    "protocol": "tcp"
-                }
+                "${server-port}:${server-port}/udp",
+                "${web-gui-port}:${web-gui-port}/tcp"
             ]
         }
     ],

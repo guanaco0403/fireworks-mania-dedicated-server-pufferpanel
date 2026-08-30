@@ -11,7 +11,7 @@ This PufferPanel template for installing, configuring, and managing a [Fireworks
 ## Prerequisites
 
 - **Docker**: Requires host Docker environment support in PufferPanel.
-- **Network**: Port **7777** (UDP) for game traffic and Port **8080** (HTTP) for the Web GUI dashboard. **Note: both ports are customizable in PufferPanel settings.**
+- **Network**: Port **7777** (UDP) for game traffic and Port **8888** (HTTP) for the Web GUI dashboard. **Note: both ports are customizable in PufferPanel settings.**
 - **GitHub Access Token** *(Optional)*: A GitHub PAT with **public_repo** scope to avoid API rate limits when downloading server releases.
 - **mod.io Access Token** *(Optional)*: Required if you wish to download and load custom community mods via mod.io.
 

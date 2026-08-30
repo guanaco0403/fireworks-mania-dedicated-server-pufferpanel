@@ -27,7 +27,7 @@ This repository provides a custom [PufferPanel](https://www.pufferpanel.com/) te
 ## ⚙️ Features & Advanced Settings
 
 - **Default Behavior**: Downloads the **latest** Linux server release from `Laumania/FireworksMania.DedicatedServer`.
-- **Integrated Web GUI**: Live status monitoring dashboard served on a separate port (`8080` by default).
+- **Integrated Web GUI**: Live status monitoring dashboard served on a separate port (`8888` by default).
 - **Custom Repository & Versions**: Under **Advanced Settings** in PufferPanel, you can specify:
   - **`github-repo`**: Change the source repository (e.g. `CustomOwner/CustomRepo`). Defaults to `Laumania/FireworksMania.DedicatedServer`.
   - **`server-version`**: Target a specific version or release tag (e.g. `latest` or `v1.2.0`).
