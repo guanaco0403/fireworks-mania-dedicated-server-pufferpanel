@@ -22,6 +22,7 @@ HOST_CONFIG_FILE = "host.config"
 MODIO_TOKEN_FILE = "modio.token"
 SERVER_LOG_FILES = [
     "server.log",
+    "/pufferpanel/server.log",
     os.path.expanduser("~/.config/unity3d/Laumania/FireworksMania/Player.log"),
     os.path.expanduser("~/.config/unity3d/Laumania/Fireworks Mania/Player.log"),
     "Player.log"
@@ -835,38 +836,35 @@ CLR_GREEN = "\033[1;32m"
 CLR_CYAN = "\033[1;36m"
 CLR_YELLOW = "\033[1;33m"
 
-def wait_for_game_server(timeout=120):
-    """Wait for the game server process to be running and initialized before starting Web GUI."""
-    print("[INFO] Web GUI service waiting for game server startup...", flush=True)
+def monitor_game_server_ready(host, port, timeout=120):
+    """Background thread to monitor game server startup and print colored notification when ready."""
     start_wait = time.time()
+    announced = False
     
-    # 1. Wait for server process PID
     while time.time() - start_wait < timeout:
         proc_info = find_server_process()
-        if proc_info["running"]:
-            break
-        time.sleep(1)
-        
-    # 2. Wait for server readiness in logs
-    while time.time() - start_wait < timeout:
         logs = read_server_logs(max_lines=50)
         log_text = "\n".join(logs)
-        if "Listening on" in log_text or "running and ready" in log_text:
+        
+        if (proc_info["running"] or "Listening on" in log_text or "running and ready" in log_text) and not announced:
+            announced = True
+            print(".", flush=True)
+            print(f"{CLR_GREEN}========================================================================{CLR_RESET}", flush=True)
+            print(f"  {CLR_CYAN}{CLR_BOLD}🎆 Fireworks Mania Dedicated Server & Web GUI are ONLINE!{CLR_RESET}", flush=True)
+            print(f"  {CLR_YELLOW}👉 Web GUI Dashboard URL: {CLR_BOLD}http://{host}:{port}{CLR_RESET}", flush=True)
+            print(f"{CLR_GREEN}========================================================================{CLR_RESET}", flush=True)
+            print(".", flush=True)
             break
         time.sleep(1)
 
 def run_server(host='0.0.0.0', port=8080):
-    wait_for_game_server()
-    
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, WebGUIRequestHandler)
+    print(f"[INFO] Fireworks Mania Web GUI service listening on http://{host}:{port}", flush=True)
     
-    print(".", flush=True)
-    print(f"{CLR_GREEN}========================================================================{CLR_RESET}", flush=True)
-    print(f"  {CLR_CYAN}{CLR_BOLD}🎆 Fireworks Mania Server Web GUI Successfully Started & Online!{CLR_RESET}", flush=True)
-    print(f"  {CLR_YELLOW}👉 Web GUI Dashboard URL: {CLR_BOLD}http://{host}:{port}{CLR_RESET}", flush=True)
-    print(f"{CLR_GREEN}========================================================================{CLR_RESET}", flush=True)
-    print(".", flush=True)
+    # Start background thread to announce colored banner when game server becomes ready
+    t = threading.Thread(target=monitor_game_server_ready, args=(host, port), daemon=True)
+    t.start()
     
     try:
         httpd.serve_forever()
