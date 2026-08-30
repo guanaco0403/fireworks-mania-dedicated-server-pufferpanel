@@ -677,116 +677,118 @@ HTML_PAGE = """<!DOCTYPE html>
         </footer>
     </div>
 
-    <script>
-        function formatSeconds(seconds) {
-            if (!seconds || !(seconds > 0)) return '00:00:00';
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = seconds % 60;
-            return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
-        }
-
-        function createPill(enabled) {
-            if (enabled) {
-                return '<span class="toggle-pill enabled">ENABLED</span>';
-            } else {
-                return '<span class="toggle-pill disabled">DISABLED</span>';
-            }
-        }
-
-        async function fetchData() {
-            try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
-
-                // Update Status Badge
-                const badge = document.getElementById('status-badge');
-                const statusText = document.getElementById('status-text');
-
-                if (data.server && data.server.running) {
-                    badge.className = 'status-badge online';
-                    statusText.textContent = 'ONLINE';
-                } else {
-                    badge.className = 'status-badge offline';
-                    statusText.textContent = 'OFFLINE';
-                }
-
-                // Metrics
-                const server = data.server || {};
-                document.getElementById('val-uptime').textContent = formatSeconds(server.uptime_seconds);
-                document.getElementById('val-pid').textContent = server.pid ? `PID: ${server.pid}` : 'PID: Offline';
-                document.getElementById('val-cpu').textContent = `${server.cpu_percent || 0}%`;
-                document.getElementById('bar-cpu').style.width = `${Math.min(server.cpu_percent || 0, 100)}%`;
-                document.getElementById('val-ram').textContent = `${server.memory_mb || 0} MB`;
-                document.getElementById('val-ram-pct').textContent = `${server.memory_percent || 0}% of system memory`;
-
-                const sys = data.system || {};
-                document.getElementById('val-disk').textContent = `${sys.disk_used_gb || 0} / ${sys.disk_total_gb || 0} GB`;
-                document.getElementById('bar-disk').style.width = `${sys.disk_percent || 0}%`;
-
-                // Host Config
-                const host = (data.host_config && data.host_config.HostConfig) ? data.host_config.HostConfig : {};
-                const game = (data.host_config && data.host_config.GameConfig) ? data.host_config.GameConfig : {};
-
-                document.getElementById('cfg-name').textContent = host.Name || '--';
-                document.getElementById('cfg-desc').textContent = host.Description || '--';
-                document.getElementById('cfg-author').textContent = host.Author || '--';
-                document.getElementById('cfg-ip').textContent = host.IP || '--';
-                document.getElementById('cfg-port').textContent = host.Port ? `${host.Port} UDP` : '--';
-                document.getElementById('cfg-players').textContent = (host.MaxPlayers !== undefined && host.MaxPlayers !== null) ? host.MaxPlayers : '--';
-                
-                const joinTypes = { 0: 'Everyone (0)', 1: 'Friends Only (1)' };
-                document.getElementById('cfg-join').textContent = joinTypes[host.WhoCanJoin] || ((host.WhoCanJoin !== undefined && host.WhoCanJoin !== null) ? host.WhoCanJoin : '--');
-
-                document.getElementById('cfg-map').textContent = game.Map || '--';
-                document.getElementById('cfg-despawn').innerHTML = createPill(game.EnableAutoDespawnUsedFireworks);
-                document.getElementById('cfg-destructions').innerHTML = createPill(game.EnableDestructions);
-                document.getElementById('cfg-fly').innerHTML = createPill(game.EnableFlyMode);
-                document.getElementById('cfg-explosion').innerHTML = createPill(game.EnableExplosionPhysicsForces);
-                document.getElementById('cfg-ignition').innerHTML = createPill(game.EnableIgnitionForces);
-                document.getElementById('cfg-delay').textContent = game.MinTimeBetweenPlayerSpawnInSeconds ? `${game.MinTimeBetweenPlayerSpawnInSeconds}s` : '--';
-
-                document.getElementById('cfg-max-fireworks').textContent = (game.MaxAllowedPlayerSpawnedFireworks !== undefined && game.MaxAllowedPlayerSpawnedFireworks !== null) ? game.MaxAllowedPlayerSpawnedFireworks : '--';
-                document.getElementById('cfg-max-props').textContent = (game.MaxAllowedPlayerSpawnedProps !== undefined && game.MaxAllowedPlayerSpawnedProps !== null) ? game.MaxAllowedPlayerSpawnedProps : '--';
-                
-                const lockedArr = game.LockedInventoryEntityIds || [];
-                document.getElementById('cfg-locked').textContent = Array.isArray(lockedArr) ? `${lockedArr.length} item(s)` : '--';
-
-                document.getElementById('cfg-version').textContent = data.installed_version || 'Unknown';
-                document.getElementById('cfg-modio').innerHTML = createPill(data.modio_token_configured);
-
-                const modsArr = game.Mods || [];
-                document.getElementById('cfg-mods-count').textContent = Array.isArray(modsArr) ? `${modsArr.length} mod(s)` : '--';
-
-            } catch (err) {
-                console.error('Error fetching server status:', err);
-            }
-
-            // Fetch Logs
-            try {
-                const resLogs = await fetch('/api/logs');
-                const dataLogs = await resLogs.json();
-                const logBox = document.getElementById('log-box');
-                if (dataLogs.logs && dataLogs.logs.length > 0) {
-                    const wasScrolledToBottom = (logBox.scrollTop + logBox.clientHeight) >= (logBox.scrollHeight - 20);
-                    logBox.textContent = dataLogs.logs.join(String.fromCharCode(10));
-                    if (wasScrolledToBottom) {
-                        logBox.scrollTop = logBox.scrollHeight;
-                    }
-                } else {
-                    logBox.textContent = 'No log entries recorded.';
-                }
-            } catch (err) {
-                console.error('Error fetching logs:', err);
-            }
-        }
-
-        // Initial fetch and set interval
-        fetchData();
-        setInterval(fetchData, 3000);
-    </script>
+    <script src="/app.js?v=2"></script>
 </body>
 </html>
+"""
+
+JS_SCRIPT = """
+function formatSeconds(seconds) {
+    if (!seconds || !(seconds > 0)) return '00:00:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+}
+
+function createPill(enabled) {
+    if (enabled) {
+        return '<span class="toggle-pill enabled">ENABLED</span>';
+    } else {
+        return '<span class="toggle-pill disabled">DISABLED</span>';
+    }
+}
+
+async function fetchData() {
+    try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        // Update Status Badge
+        const badge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+
+        if (data.server && data.server.running) {
+            badge.className = 'status-badge online';
+            statusText.textContent = 'ONLINE';
+        } else {
+            badge.className = 'status-badge offline';
+            statusText.textContent = 'OFFLINE';
+        }
+
+        // Metrics
+        const server = data.server || {};
+        document.getElementById('val-uptime').textContent = formatSeconds(server.uptime_seconds);
+        document.getElementById('val-pid').textContent = server.pid ? `PID: ${server.pid}` : 'PID: Offline';
+        document.getElementById('val-cpu').textContent = `${server.cpu_percent || 0}%`;
+        document.getElementById('bar-cpu').style.width = `${Math.min(server.cpu_percent || 0, 100)}%`;
+        document.getElementById('val-ram').textContent = `${server.memory_mb || 0} MB`;
+        document.getElementById('val-ram-pct').textContent = `${server.memory_percent || 0}% of system memory`;
+
+        const sys = data.system || {};
+        document.getElementById('val-disk').textContent = `${sys.disk_used_gb || 0} / ${sys.disk_total_gb || 0} GB`;
+        document.getElementById('bar-disk').style.width = `${sys.disk_percent || 0}%`;
+
+        // Host Config
+        const host = (data.host_config && data.host_config.HostConfig) ? data.host_config.HostConfig : {};
+        const game = (data.host_config && data.host_config.GameConfig) ? data.host_config.GameConfig : {};
+
+        document.getElementById('cfg-name').textContent = host.Name || '--';
+        document.getElementById('cfg-desc').textContent = host.Description || '--';
+        document.getElementById('cfg-author').textContent = host.Author || '--';
+        document.getElementById('cfg-ip').textContent = host.IP || '--';
+        document.getElementById('cfg-port').textContent = host.Port ? `${host.Port} UDP` : '--';
+        document.getElementById('cfg-players').textContent = (host.MaxPlayers !== undefined && host.MaxPlayers !== null) ? host.MaxPlayers : '--';
+        
+        const joinTypes = { 0: 'Everyone (0)', 1: 'Friends Only (1)' };
+        document.getElementById('cfg-join').textContent = joinTypes[host.WhoCanJoin] || ((host.WhoCanJoin !== undefined && host.WhoCanJoin !== null) ? host.WhoCanJoin : '--');
+
+        document.getElementById('cfg-map').textContent = game.Map || '--';
+        document.getElementById('cfg-despawn').innerHTML = createPill(game.EnableAutoDespawnUsedFireworks);
+        document.getElementById('cfg-destructions').innerHTML = createPill(game.EnableDestructions);
+        document.getElementById('cfg-fly').innerHTML = createPill(game.EnableFlyMode);
+        document.getElementById('cfg-explosion').innerHTML = createPill(game.EnableExplosionPhysicsForces);
+        document.getElementById('cfg-ignition').innerHTML = createPill(game.EnableIgnitionForces);
+        document.getElementById('cfg-delay').textContent = game.MinTimeBetweenPlayerSpawnInSeconds ? `${game.MinTimeBetweenPlayerSpawnInSeconds}s` : '--';
+
+        document.getElementById('cfg-max-fireworks').textContent = (game.MaxAllowedPlayerSpawnedFireworks !== undefined && game.MaxAllowedPlayerSpawnedFireworks !== null) ? game.MaxAllowedPlayerSpawnedFireworks : '--';
+        document.getElementById('cfg-max-props').textContent = (game.MaxAllowedPlayerSpawnedProps !== undefined && game.MaxAllowedPlayerSpawnedProps !== null) ? game.MaxAllowedPlayerSpawnedProps : '--';
+        
+        const lockedArr = game.LockedInventoryEntityIds || [];
+        document.getElementById('cfg-locked').textContent = Array.isArray(lockedArr) ? `${lockedArr.length} item(s)` : '--';
+
+        document.getElementById('cfg-version').textContent = data.installed_version || 'Unknown';
+        document.getElementById('cfg-modio').innerHTML = createPill(data.modio_token_configured);
+
+        const modsArr = game.Mods || [];
+        document.getElementById('cfg-mods-count').textContent = Array.isArray(modsArr) ? `${modsArr.length} mod(s)` : '--';
+
+    } catch (err) {
+        console.error('Error fetching server status:', err);
+    }
+
+    // Fetch Logs
+    try {
+        const resLogs = await fetch('/api/logs');
+        const dataLogs = await resLogs.json();
+        const logBox = document.getElementById('log-box');
+        if (dataLogs.logs && dataLogs.logs.length > 0) {
+            const wasScrolledToBottom = (logBox.scrollTop + logBox.clientHeight) >= (logBox.scrollHeight - 20);
+            logBox.textContent = dataLogs.logs.join('\\n');
+            if (wasScrolledToBottom) {
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+        } else {
+            logBox.textContent = 'No log entries recorded.';
+        }
+    } catch (err) {
+        console.error('Error fetching logs:', err);
+    }
+}
+
+// Initial fetch and set interval
+fetchData();
+setInterval(fetchData, 3000);
 """
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -812,6 +814,16 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_js(self, js_content, status_code=200):
+        body = js_content.encode('utf-8')
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/javascript; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         self.end_headers()
         self.wfile.write(body)
 
@@ -820,6 +832,8 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
 
         if path in ['/', '/index.html']:
             self.send_html(HTML_PAGE)
+        elif path in ['/app.js', '/script.js']:
+            self.send_js(JS_SCRIPT)
         elif path == '/api/status':
             payload = {
                 "server": find_server_process(),
@@ -890,10 +904,28 @@ def run_server(host='0.0.0.0', port=8080):
         print("\n[INFO] Shutting down Web GUI server.", flush=True)
         httpd.server_close()
 
+def auto_update_script_if_needed():
+    """Auto-update ServerWebGUI.py from GitHub if local file is missing the new /app.js architecture."""
+    try:
+        import urllib.request
+        url = f"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            content = resp.read().decode('utf-8')
+            if "/app.js" in content and len(content) > 1000:
+                script_path = os.path.abspath(__file__)
+                with open(script_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                print("[INFO] ServerWebGUI.py updated automatically from GitHub.", flush=True)
+    except Exception:
+        pass
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Fireworks Mania Dedicated Server Web GUI")
     parser.add_argument('--port', type=int, default=8080, help="Port to run the Web GUI on (default: 8080)")
     parser.add_argument('--host', type=str, default='0.0.0.0', help="Host address to bind to (default: 0.0.0.0)")
     args = parser.parse_args()
 
+    auto_update_script_if_needed()
     run_server(host=args.host, port=args.port)
+
