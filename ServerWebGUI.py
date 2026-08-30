@@ -769,7 +769,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 const logBox = document.getElementById('log-box');
                 if (dataLogs.logs && dataLogs.logs.length > 0) {
                     const wasScrolledToBottom = logBox.scrollHeight - logBox.clientHeight <= logBox.scrollTop + 20;
-                    logBox.textContent = dataLogs.logs.join('\n');
+                    logBox.textContent = dataLogs.logs.join(String.fromCharCode(10));
                     if (wasScrolledToBottom) {
                         logBox.scrollTop = logBox.scrollHeight;
                     }
