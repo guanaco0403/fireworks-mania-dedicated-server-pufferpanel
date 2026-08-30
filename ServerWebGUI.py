@@ -679,11 +679,11 @@ HTML_PAGE = """<!DOCTYPE html>
 
     <script>
         function formatSeconds(seconds) {
-            if (!seconds || seconds <= 0) return '00:00:00';
+            if (!seconds || !(seconds > 0)) return '00:00:00';
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             const s = seconds % 60;
-            return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
+            return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
         }
 
         function createPill(enabled) {
@@ -768,7 +768,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 const dataLogs = await resLogs.json();
                 const logBox = document.getElementById('log-box');
                 if (dataLogs.logs && dataLogs.logs.length > 0) {
-                    const wasScrolledToBottom = logBox.scrollHeight - logBox.clientHeight <= logBox.scrollTop + 20;
+                    const wasScrolledToBottom = (logBox.scrollTop + logBox.clientHeight) >= (logBox.scrollHeight - 20);
                     logBox.textContent = dataLogs.logs.join(String.fromCharCode(10));
                     if (wasScrolledToBottom) {
                         logBox.scrollTop = logBox.scrollHeight;
