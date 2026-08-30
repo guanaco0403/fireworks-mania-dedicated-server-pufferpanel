@@ -371,7 +371,9 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(body)
 
@@ -380,7 +382,9 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(body)
 
@@ -437,10 +441,32 @@ def run_server(host='0.0.0.0', port=8080):
         print("\n[INFO] Shutting down Web GUI server.", flush=True)
         httpd.server_close()
 
+def auto_update_self():
+    """Always check and fetch the latest ServerWebGUI.py from GitHub on launch to ensure instant script overwrite."""
+    try:
+        import urllib.request
+        url = f"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (ServerWebGUIAutoUpdater)'})
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            remote_content = resp.read().decode('utf-8')
+            if len(remote_content) > 1000 and "Fireworks Mania Server Info Web GUI" in remote_content:
+                script_path = os.path.abspath(__file__)
+                if os.path.exists(script_path):
+                    with open(script_path, 'r', encoding='utf-8') as f:
+                        local_content = f.read()
+                    if remote_content.strip() != local_content.strip():
+                        with open(script_path, 'w', encoding='utf-8') as f:
+                            f.write(remote_content)
+                        print("[INFO] ServerWebGUI.py automatically updated to latest version from GitHub. Restarting...", flush=True)
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception:
+        pass
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Fireworks Mania Dedicated Server Web GUI")
     parser.add_argument('--port', type=int, default=8080, help="Port to run the Web GUI on (default: 8080)")
     parser.add_argument('--host', type=str, default='0.0.0.0', help="Host address to bind to (default: 0.0.0.0)")
     args = parser.parse_args()
 
+    auto_update_self()
     run_server(host=args.host, port=args.port)
