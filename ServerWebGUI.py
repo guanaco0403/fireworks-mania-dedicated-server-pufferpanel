@@ -4,7 +4,6 @@ import json
 import time
 import argparse
 import threading
-import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
@@ -438,26 +437,10 @@ def run_server(host='0.0.0.0', port=8080):
         print("\n[INFO] Shutting down Web GUI server.", flush=True)
         httpd.server_close()
 
-def auto_update_script_if_needed():
-    """Auto-update ServerWebGUI.py from GitHub if local file is missing simplified architecture."""
-    try:
-        url = f"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            content = resp.read().decode('utf-8')
-            if "Fireworks Mania Server Info Web GUI" in content and len(content) > 1000:
-                script_path = os.path.abspath(__file__)
-                with open(script_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                print("[INFO] ServerWebGUI.py updated automatically from GitHub.", flush=True)
-    except Exception:
-        pass
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Fireworks Mania Dedicated Server Web GUI")
     parser.add_argument('--port', type=int, default=8080, help="Port to run the Web GUI on (default: 8080)")
     parser.add_argument('--host', type=str, default='0.0.0.0', help="Host address to bind to (default: 0.0.0.0)")
     args = parser.parse_args()
 
-    auto_update_script_if_needed()
     run_server(host=args.host, port=args.port)
