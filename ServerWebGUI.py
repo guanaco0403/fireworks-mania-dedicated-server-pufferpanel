@@ -829,14 +829,49 @@ class WebGUIRequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_json({"error": "Not Found"}, 404)
 
+CLR_RESET = "\033[0m"
+CLR_BOLD = "\033[1m"
+CLR_GREEN = "\033[1;32m"
+CLR_CYAN = "\033[1;36m"
+CLR_YELLOW = "\033[1;33m"
+
+def wait_for_game_server(timeout=120):
+    """Wait for the game server process to be running and initialized before starting Web GUI."""
+    print("[INFO] Web GUI service waiting for game server startup...", flush=True)
+    start_wait = time.time()
+    
+    # 1. Wait for server process PID
+    while time.time() - start_wait < timeout:
+        proc_info = find_server_process()
+        if proc_info["running"]:
+            break
+        time.sleep(1)
+        
+    # 2. Wait for server readiness in logs
+    while time.time() - start_wait < timeout:
+        logs = read_server_logs(max_lines=50)
+        log_text = "\n".join(logs)
+        if "Listening on" in log_text or "running and ready" in log_text:
+            break
+        time.sleep(1)
+
 def run_server(host='0.0.0.0', port=8080):
+    wait_for_game_server()
+    
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, WebGUIRequestHandler)
-    print(f"[INFO] Fireworks Mania Server Web GUI listening on http://{host}:{port}")
+    
+    print(".", flush=True)
+    print(f"{CLR_GREEN}========================================================================{CLR_RESET}", flush=True)
+    print(f"  {CLR_CYAN}{CLR_BOLD}🎆 Fireworks Mania Server Web GUI Successfully Started & Online!{CLR_RESET}", flush=True)
+    print(f"  {CLR_YELLOW}👉 Web GUI Dashboard URL: {CLR_BOLD}http://{host}:{port}{CLR_RESET}", flush=True)
+    print(f"{CLR_GREEN}========================================================================{CLR_RESET}", flush=True)
+    print(".", flush=True)
+    
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n[INFO] Shutting down Web GUI server.")
+        print("\n[INFO] Shutting down Web GUI server.", flush=True)
         httpd.server_close()
 
 if __name__ == '__main__':

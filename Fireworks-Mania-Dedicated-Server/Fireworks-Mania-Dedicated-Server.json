@@ -220,13 +220,18 @@
     ],
     "uninstall": null,
     "run": {
-        "command": "sh -c \"python3 ServerWebGUI.py --port ${web-gui-port} & exec ./FireworksManiaDedicatedLinux.x86_64\"",
+        "command": "./start.sh",
         "stop": "quit",
         "pre": [
             {
+                "type": "writefile",
+                "target": "start.sh",
+                "text": "#!/bin/sh\nwhich python3 >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip python3-requests python3-github python3-psutil curl ca-certificates)\n[ -f ServerWebGUI.py ] || curl -sSL -o ServerWebGUI.py \"https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?$(date +%s)\"\npython3 ServerWebGUI.py --port ${web-gui-port} &\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
+            },
+            {
                 "type": "command",
                 "commands": [
-                    "chmod +x FireworksManiaDedicatedLinux.x86_64"
+                    "chmod +x start.sh FireworksManiaDedicatedLinux.x86_64"
                 ]
             },
             {
