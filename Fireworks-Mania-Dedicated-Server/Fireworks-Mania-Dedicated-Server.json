@@ -149,13 +149,6 @@
             "required": true,
             "userEdit": true
         },
-        "web-gui-port": {
-            "type": "integer",
-            "value": 8888,
-            "display": "Web GUI Port (HTTP)",
-            "required": true,
-            "userEdit": true
-        },
         "who-can-join": {
             "type": "integer",
             "value": 0,
@@ -193,8 +186,7 @@
             "variables": [
                 "who-can-join",
                 "server-ip",
-                "server-port",
-                "web-gui-port"
+                "server-port"
             ],
             "order": 2
         },
@@ -214,7 +206,7 @@
         {
             "type": "command",
             "commands": [
-                "sh -c \"apt-get update && apt-get install -y --no-install-recommends ca-certificates && pip install --no-cache-dir requests PyGithub && python3 -c \\\"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py'); urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}', 'ServerWebGUI.py')\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
+                "sh -c \"apt-get update && apt-get install -y --no-install-recommends ca-certificates && pip install --no-cache-dir requests PyGithub && python3 -c \\\"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\\\" && python3 ServerAutoUpdate.py --token \\\"${github-token}\\\" --repo \\\"${github-repo}\\\" --version \\\"${server-version}\\\" || true\""
             ]
         }
     ],
@@ -226,7 +218,7 @@
             {
                 "type": "writefile",
                 "target": "start.sh",
-                "text": "#!/bin/sh\npython3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerWebGUI.py?t={int(time.time())}', 'ServerWebGUI.py')\" || true\nexec python3 ServerWebGUI.py --port ${web-gui-port} --launch-server\n"
+                "text": "#!/bin/sh\npython3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
             },
             {
                 "type": "command",
@@ -259,8 +251,7 @@
         "networkName": "host",
         "bindings": {},
         "portBindings": [
-            "${server-port}:${server-port}/udp",
-            "${web-gui-port}:${web-gui-port}/tcp"
+            "${server-port}:${server-port}/udp"
         ]
     },
     "supportedEnvironments": [
@@ -271,8 +262,7 @@
             "networkName": "host",
             "bindings": {},
             "portBindings": [
-                "${server-port}:${server-port}/udp",
-                "${web-gui-port}:${web-gui-port}/tcp"
+                "${server-port}:${server-port}/udp"
             ]
         }
     ],
