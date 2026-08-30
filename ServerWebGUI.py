@@ -49,19 +49,21 @@ def send_server_command(cmd_string):
     if not cmd_string or not cmd_string.strip():
         return False, "Command cannot be empty."
 
-    clean_cmd = cmd_string.strip() + "\n"
+    raw_cmd = cmd_string.strip()
+    cmd_bytes = (raw_cmd + "\r\n").encode('utf-8')
+    success = False
 
     # Method 1: FIFO Pipe (server_input.fifo)
     if os.path.exists(FIFO_PIPE_FILE):
         try:
-            with open(FIFO_PIPE_FILE, "w", encoding="utf-8") as f:
-                f.write(clean_cmd)
+            with open(FIFO_PIPE_FILE, "wb") as f:
+                f.write(cmd_bytes)
                 f.flush()
-            return True, f"Command sent: {cmd_string.strip()}"
+            success = True
         except Exception:
             pass
 
-    # Method 2: Direct /proc/<pid>/fd/0 injection
+    # Method 2: Process stdin /proc/<pid>/fd/0
     proc_info = find_server_process()
     pid = proc_info.get("pid")
     if pid:
@@ -69,12 +71,24 @@ def send_server_command(cmd_string):
         try:
             if os.path.exists(stdin_path):
                 with open(stdin_path, "wb") as f:
-                    f.write(clean_cmd.encode('utf-8'))
+                    f.write(cmd_bytes)
                     f.flush()
-                return True, f"Command sent: {cmd_string.strip()}"
-        except Exception as e:
-            return False, f"Failed to write to stdin: {e}"
+                success = True
+        except Exception:
+            pass
 
+    # Method 3: Container stdin /proc/1/fd/0
+    if os.path.exists("/proc/1/fd/0") and (not pid or pid != 1):
+        try:
+            with open("/proc/1/fd/0", "wb") as f:
+                f.write(cmd_bytes)
+                f.flush()
+            success = True
+        except Exception:
+            pass
+
+    if success:
+        return True, f"Command sent: {raw_cmd}"
     return False, "Server process is not running or stdin is unavailable."
 
 def parse_connected_players():
@@ -966,18 +980,6 @@ def monitor_game_server_ready(host, port, timeout=120):
             break
         time.sleep(1)
 
-def player_polling_loop():
-    """Background loop to query fm-host-list-players every 6 seconds."""
-    time.sleep(10)
-    while True:
-        try:
-            proc = find_server_process()
-            if proc.get("running"):
-                send_server_command("fm-host-list-players")
-        except Exception:
-            pass
-        time.sleep(6)
-
 def run_server(host='0.0.0.0', port=8080):
     server_address = (host, port)
     httpd = ThreadedHTTPServer(server_address, WebGUIRequestHandler)
@@ -985,9 +987,6 @@ def run_server(host='0.0.0.0', port=8080):
     
     t1 = threading.Thread(target=monitor_game_server_ready, args=(host, port), daemon=True)
     t1.start()
-
-    t2 = threading.Thread(target=player_polling_loop, daemon=True)
-    t2.start()
     
     try:
         httpd.serve_forever()
