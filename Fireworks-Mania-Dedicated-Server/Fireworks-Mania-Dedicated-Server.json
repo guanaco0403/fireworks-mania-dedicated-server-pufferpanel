@@ -218,7 +218,7 @@
             {
                 "type": "writefile",
                 "target": "start.sh",
-                "text": "#!/bin/sh\npython3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\npython3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
+                "text": "#!/bin/sh\npip install --no-cache-dir requests PyGithub >/dev/null 2>&1 || true\npython3 -c \"import urllib.request, time; urllib.request.urlretrieve(f'https://raw.githubusercontent.com/guanaco0403/fireworks-mania-dedicated-server-pufferpanel/main/ServerAutoUpdate.py?t={int(time.time())}', 'ServerAutoUpdate.py')\" || true\npython3 ServerAutoUpdate.py --token \"${github-token}\" --repo \"${github-repo}\" --version \"${server-version}\" || true\nexec ./FireworksManiaDedicatedLinux.x86_64\n"
             },
             {
                 "type": "command",

@@ -1,8 +1,19 @@
 import argparse
 import os
-import requests
+import sys
 import zipfile
-from github import Github, Auth, BadCredentialsException, UnknownObjectException
+
+try:
+    import requests
+except ImportError:
+    os.system(f"{sys.executable} -m pip install requests PyGithub")
+    import requests
+
+try:
+    from github import Github, Auth, BadCredentialsException, UnknownObjectException
+except ImportError:
+    os.system(f"{sys.executable} -m pip install PyGithub")
+    from github import Github, Auth, BadCredentialsException, UnknownObjectException
 
 # ANSI Color Codes
 CLR_RESET = "\033[0m"
