@@ -41,7 +41,8 @@ print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Auto Server Updater V2.0{CLR_RESET
 print(f"               {CLR_CYAN}By Guanaco0403{CLR_RESET}")
 print(f"{CLR_GREEN}=========================================={CLR_RESET}")
 
-def download_asset(asset, asset_name, github_token=None):
+def download_asset(asset, target_path, github_token=None):
+    asset_name = os.path.basename(target_path)
     print_info(f"Downloading asset: {asset_name}...")
     headers = {
         'Accept': 'application/octet-stream'
@@ -49,55 +50,100 @@ def download_asset(asset, asset_name, github_token=None):
     if github_token and github_token.strip() and github_token.strip().lower() != "none":
         headers['Authorization'] = f'token {github_token.strip()}'
 
-    try:
-        response = requests.get(asset.url, headers=headers, stream=True)
+    part_path = f"{target_path}.part"
 
-        if response.status_code == 200:
-            with open(asset_name, 'wb') as file:
-                for chunk in response.iter_content(chunk_size=1024):
-                    if chunk:
-                        file.write(chunk)
+    def _stream_download(url, req_headers):
+        try:
+            with requests.get(url, headers=req_headers, stream=True, timeout=60) as resp:
+                if resp.status_code == 200:
+                    total_size = int(resp.headers.get('content-length', 0))
+                    downloaded = 0
+                    last_pct = -1
+                    with open(part_path, 'wb') as file:
+                        for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                            if chunk:
+                                file.write(chunk)
+                                downloaded += len(chunk)
+                                if total_size > 0:
+                                    pct = int((downloaded / total_size) * 100)
+                                    if pct % 10 == 0 and pct != last_pct:
+                                        last_pct = pct
+                                        mb_dl = downloaded // (1024 * 1024)
+                                        mb_tot = total_size // (1024 * 1024)
+                                        print_info(f"Download progress: {pct}% ({mb_dl}MB / {mb_tot}MB)")
+                    return True
+                return resp
+        except Exception as e:
+            return e
+
+    try:
+        # Try authenticated / asset.url first
+        res = _stream_download(asset.url, headers)
+        if res is True:
+            if os.path.exists(target_path):
+                os.remove(target_path)
+            os.rename(part_path, target_path)
             print_success(f"Successfully downloaded {asset_name}")
             return True
-        elif response.status_code in (401, 403, 404) and github_token:
-            print_warn(f"Download with provided token returned HTTP {response.status_code}. Retrying without token...")
-            headers_no_token = {'Accept': 'application/octet-stream'}
-            response_retry = requests.get(asset.url, headers=headers_no_token, stream=True)
-            if response_retry.status_code == 200:
-                with open(asset_name, 'wb') as file:
-                    for chunk in response_retry.iter_content(chunk_size=1024):
-                        if chunk:
-                            file.write(chunk)
-                print_success(f"Successfully downloaded {asset_name} (unauthenticated)")
+
+        status_code = getattr(res, 'status_code', None)
+        if status_code in (401, 403, 404):
+            # Try fallback URL without token
+            fallback_url = getattr(asset, 'browser_download_url', None) or asset.url
+            print_warn(f"Download returned HTTP {status_code}. Retrying via fallback URL without token...")
+            res_retry = _stream_download(fallback_url, {'Accept': 'application/octet-stream'})
+            if res_retry is True:
+                if os.path.exists(target_path):
+                    os.remove(target_path)
+                os.rename(part_path, target_path)
+                print_success(f"Successfully downloaded {asset_name} (fallback)")
                 return True
 
-        print_error(f"Failed to download asset (HTTP {response.status_code}): {response.text}")
-        if not github_token and response.status_code in (401, 403, 404):
+        if os.path.exists(part_path):
+            os.remove(part_path)
+
+        if hasattr(res, 'status_code'):
+            print_error(f"Failed to download asset (HTTP {res.status_code}): {getattr(res, 'text', '')}")
+        else:
+            print_error(f"Download failed: {res}")
+
+        if not github_token and status_code in (401, 403, 404):
             print_warn("Notice: If this repository asset is private or rate-limited, please specify a valid GitHub Token in PufferPanel settings.")
         return False
     except Exception as e:
+        if os.path.exists(part_path):
+            os.remove(part_path)
         print_error(f"Download exception: {e}")
         return False
 
-def extract_zip(file_path):
-    print_info("Extracting archive...")
+def extract_zip(file_path, extract_path):
+    print_info(f"Extracting archive '{os.path.basename(file_path)}'...")
     try:
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
-            extract_path = os.path.dirname(os.path.abspath(__file__))
             zip_ref.extractall(extract_path)
             print_success(f"Extracted files to: {extract_path}")
-            return True
+
+        # Ensure server binary has execute permissions
+        binary_path = os.path.join(extract_path, "FireworksManiaDedicatedLinux.x86_64")
+        if os.path.exists(binary_path):
+            try:
+                os.chmod(binary_path, 0o755)
+            except Exception:
+                pass
+        return True
     except Exception as e:
         print_error(f"Failed to extract archive: {e}")
         return False
 
-def main(github_token=None, github_repo=None, server_version=None):
+def main(github_token=None, github_repo=None, server_version=None, force=False):
     token = github_token.strip() if github_token and github_token.strip() and github_token.strip().lower() != "none" else None
     repo_target = github_repo.strip() if github_repo and github_repo.strip() else 'Laumania/FireworksMania.DedicatedServer'
     version_target = server_version.strip() if server_version and server_version.strip() else 'latest'
 
     print_info(f"Target Repository: {repo_target}")
     print_info(f"Target Version: {version_target}")
+    if force:
+        print_info("Install/Force mode enabled: bypassing .installed_version check and forcing download & overwrite.")
 
     g = None
     repo = None
@@ -127,12 +173,12 @@ def main(github_token=None, github_repo=None, server_version=None):
             print_error(f"Repository '{repo_target}' not found (404).")
             if not token:
                 print_warn("If this repository is private, a valid GitHub Personal Access Token is required in PufferPanel settings.")
-            return
+            return False
         except Exception as e:
             print_error(f"Error accessing repository '{repo_target}': {e}")
             if not token:
                 print_warn("If this repository is private or rate-limited, please provide a valid GitHub Personal Access Token in PufferPanel settings.")
-            return
+            return False
 
     # Fetch targeted release
     target_release = None
@@ -148,7 +194,7 @@ def main(github_token=None, github_repo=None, server_version=None):
                     target_release = releases[0]
             except Exception as e_rel:
                 print_error(f"Error fetching releases: {e_rel}")
-                return
+                return False
     else:
         print_info(f"Searching for release tag/version '{version_target}'...")
         try:
@@ -165,49 +211,67 @@ def main(github_token=None, github_repo=None, server_version=None):
                         break
             except Exception as e_rel:
                 print_error(f"Error searching releases: {e_rel}")
-                return
+                return False
 
     if not target_release:
         print_error(f"Could not find release matching version '{version_target}' in {repo_target}.")
         if not token:
             print_warn("Notice: If this version or repository requires authentication, please specify a GitHub Token in PufferPanel settings.")
-        return
+        return False
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    version_file = os.path.join(base_dir, ".installed_version")
+    binary_path = os.path.join(base_dir, "FireworksManiaDedicatedLinux.x86_64")
 
     # Find Linux asset in release
     for asset in target_release.get_assets():
         if 'Linux' in asset.name and asset.name.endswith('.zip'):
             print_info(f"Found target release asset: {asset.name}")
 
-            # Check if this version is already installed locally
-            version_file = ".installed_version"
             version_marker = f"{repo_target}:{target_release.tag_name}:{asset.name}"
-            binary_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "FireworksManiaDedicatedLinux.x86_64")
 
-            if os.path.exists(version_file) and os.path.exists(binary_path):
+            # Check if this version is already installed locally (only if not forcing)
+            if not force and os.path.exists(version_file) and os.path.exists(binary_path):
                 try:
                     with open(version_file, "r") as f:
                         installed_marker = f.read().strip()
                     if installed_marker == version_marker:
                         print_success(f"Server is already up-to-date ({target_release.tag_name}). Skipping download.")
-                        return
+                        return True
                 except Exception:
                     pass
 
-            print_info(f"Downloading and installing server release '{target_release.tag_name}'...")
-            if download_asset(asset, asset.name, token):
-                if extract_zip(asset.name):
+            if force:
+                print_info(f"Install/Force mode: downloading and overwriting server release '{target_release.tag_name}'...")
+            else:
+                print_info(f"Downloading and installing server release '{target_release.tag_name}'...")
+
+            archive_path = os.path.join(base_dir, asset.name)
+            if download_asset(asset, archive_path, token):
+                if extract_zip(archive_path, base_dir):
+                    # Clean up downloaded zip archive to save disk space
+                    try:
+                        if os.path.exists(archive_path):
+                            os.remove(archive_path)
+                    except Exception:
+                        pass
+
+                    # Save version marker
                     try:
                         with open(version_file, "w") as f:
                             f.write(version_marker)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print_warn(f"Notice: Failed to write {version_file}: {e}")
+
                     print(f"{CLR_GREEN}================================================={CLR_RESET}")
                     print(f"  {CLR_CYAN}{CLR_BOLD}Fireworks Mania Server Successfully Installed / Updated{CLR_RESET}")
                     print(f"{CLR_GREEN}================================================={CLR_RESET}")
-                    return
-            return
+                    return True
+                return False
+            return False
 
     print_error(f"No matching Linux server asset (.zip) found in release '{target_release.tag_name}'.")
+    return False
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download and update Dedicated Server from GitHub')
@@ -215,6 +279,7 @@ if __name__ == "__main__":
     parser.add_argument('--token', type=str, default='', help='Your GitHub access token')
     parser.add_argument('--repo', type=str, default='Laumania/FireworksMania.DedicatedServer', help='GitHub repository (owner/repo)')
     parser.add_argument('--version', type=str, default='latest', help='Server release version or tag name (e.g. latest or v1.2.0)')
+    parser.add_argument('--force', '--install', action='store_true', dest='force', help='Force download and overwrite existing files, ignoring .installed_version')
 
     args = parser.parse_args()
 
@@ -230,4 +295,5 @@ if __name__ == "__main__":
     if version and (version.startswith("${") and version.endswith("}")):
         version = "latest"
 
-    main(github_token=token, github_repo=repo, server_version=version)
+    success = main(github_token=token, github_repo=repo, server_version=version, force=args.force)
+    sys.exit(0 if success else 1)

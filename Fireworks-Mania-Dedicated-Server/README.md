@@ -17,10 +17,10 @@ This PufferPanel template installs, configures, and manages a [Fireworks Mania](
 
 ## Installation & Maintenance
 
-When a new server is created in PufferPanel with this template:
+When a new server is created or installed in PufferPanel with this template:
 1. PufferPanel installs Python dependencies (**`requests`**, **`PyGithub`**) inside the container.
 2. Downloads **`ServerAutoUpdate.py`**.
-3. **`ServerAutoUpdate.py`** checks the target repository (**`Laumania/FireworksMania.DedicatedServer`** by default) for the specified release tag (**`latest`** by default).
-4. Extracts **`FireworksManiaDedicatedLinux.x86_64`** and sets execution permissions.
+3. Runs **`ServerAutoUpdate.py --install`** to download and overwrite the target release (ignoring `.installed_version`), ensuring a fresh and clean installation.
+4. On startup, if **`auto-update-on-start`** is enabled, **`ServerAutoUpdate.py`** checks **`.installed_version`** against GitHub and updates only if a newer version is released.
 5. Generates **`host.config`** and **`modio.token`** files automatically before each launch.
 6. Launches **`FireworksManiaDedicatedLinux.x86_64`**.
